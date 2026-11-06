@@ -1,0 +1,765 @@
+<title>Book Graph</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=Libre+Caslon+Display&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: a reading companion. The story on one side, Holmes's index of men and things on the other,
+   and a reading-position rail along the bottom that every view obeys. */
+:root {
+  --paper: #eef1f3;      /* cool foolscap ground */
+  --leaf: #fbfcfc;       /* the page you read on */
+  --ink: #17202b;
+  --ink-2: #526070;
+  --rule: #d3dae0;
+  --accent: #0d6b76;     /* the King's beryl */
+  --mark: #cfe6e8;
+  --c-person: #2d5aa6;
+  --c-place: #2c7a4d;
+  --c-thing: #a8691a;
+  --c-group: #84407a;
+  --good: #2c7a4d;
+  --l1: #2d5aa6; --l2: #b5462f; --l3: #2c7a4d; --l4: #84407a; --l5: #a8691a; --l6: #0d6b76; --l7: #6a5acd; --l8: #7a6a52;
+  --shadow: 0 10px 30px rgba(23, 32, 43, .16);
+  --display: "Libre Caslon Display", "Libre Caslon Text", Georgia, "Times New Roman", serif;
+  --body: "Spectral", Georgia, "Times New Roman", serif;
+  --ui: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f141a; --leaf: #151b22; --ink: #e2e7ec; --ink-2: #97a3af; --rule: #28323c;
+    --accent: #52b7c2; --mark: #1d474d;
+    --c-person: #82a8ea; --c-place: #6cc193; --c-thing: #e2a656; --c-group: #cc8dc1; --good: #6cc193;
+    --l1: #82a8ea; --l2: #ec8a72; --l3: #6cc193; --l4: #cc8dc1; --l5: #e2a656; --l6: #52b7c2; --l7: #a99cf0; --l8: #c3b393;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f141a; --leaf: #151b22; --ink: #e2e7ec; --ink-2: #97a3af; --rule: #28323c;
+  --accent: #52b7c2; --mark: #1d474d;
+  --c-person: #82a8ea; --c-place: #6cc193; --c-thing: #e2a656; --c-group: #cc8dc1; --good: #6cc193;
+  --l1: #82a8ea; --l2: #ec8a72; --l3: #6cc193; --l4: #cc8dc1; --l5: #e2a656; --l6: #52b7c2; --l7: #a99cf0; --l8: #c3b393;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html { height: 100%; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body { height: 100%; background: var(--paper); color: var(--ink); font-family: var(--ui); font-size: 14px; line-height: 1.4; -webkit-text-size-adjust: 100%; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Header */
+.top { display: flex; align-items: baseline; gap: 12px; padding-block: 10px 8px; border-bottom: 1px solid var(--rule); background: var(--paper); }
+.brand { font-family: var(--ui); font-weight: 600; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.book { min-width: 0; font-family: var(--display); font-size: 19px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.book small { font-family: var(--ui); font-size: 12px; color: var(--ink-2); margin-left: 6px; }
+
+/* Panes */
+main { position: relative; min-height: 0; }
+.pane { position: absolute; inset: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
+.pane-pad { padding-block: 18px 28px; }
+
+/* Dock: position rail + tabs */
+.dock { background: var(--paper); border-top: 1px solid var(--rule); padding-block: 8px 0; display: grid; gap: 6px; }
+.rail { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 8px; }
+.step { height: 40px; border: 1px solid var(--rule); background: var(--leaf); border-radius: 8px; font-size: 18px; cursor: pointer; }
+.step:disabled { opacity: .35; cursor: default; }
+.where { min-width: 0; text-align: center; }
+.where-k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.where-t { font-family: var(--display); font-size: 18px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slider { position: relative; padding-bottom: 14px; }
+.slider input { width: 100%; margin: 0; accent-color: var(--accent); height: 24px; }
+.ticks { position: absolute; left: 10px; right: 10px; bottom: 0; height: 14px; font-size: 10px; letter-spacing: .08em; color: var(--ink-2); }
+.ticks span { position: absolute; transform: translateX(-2px); }
+.tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--rule); }
+.tab { border: 0; background: none; padding: 10px 2px 11px; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; border-top: 2px solid transparent; margin-top: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-top-color: var(--accent); }
+
+/* Reader */
+.reader { background: var(--leaf); }
+.read-inner { max-width: 36em; margin: 0 auto; }
+.eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.scene-title { font-family: var(--display); font-weight: 400; font-size: 30px; line-height: 1.1; margin: 6px 0 4px; text-wrap: balance; }
+.scene-place { font-size: 13px; color: var(--ink-2); }
+.added { margin: 14px 0 4px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); font-size: 13px; line-height: 1.55; }
+.added b { font-weight: 600; }
+.viewing { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 14px; padding: 8px 12px; border-radius: 8px; background: var(--mark); font-size: 13px; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.prose { font-family: var(--body); font-size: 17.5px; line-height: 1.62; margin-top: 18px; hanging-punctuation: first; }
+.prose p { margin: 0 0 .9em; }
+.nm { cursor: pointer; border-bottom: 1.5px solid currentColor; }
+.nm.t-person { border-color: color-mix(in srgb, var(--c-person) 60%, transparent); }
+.nm.t-place  { border-color: color-mix(in srgb, var(--c-place) 60%, transparent); }
+.nm.t-thing  { border-color: color-mix(in srgb, var(--c-thing) 60%, transparent); }
+.nm.t-group  { border-color: color-mix(in srgb, var(--c-group) 60%, transparent); }
+.nm:hover { background: var(--mark); }
+mark.q { background: var(--mark); color: inherit; box-shadow: 0 0 0 2px var(--mark); }
+.next { display: block; width: 100%; margin-top: 18px; padding: 14px 16px; border: 1px solid var(--accent); border-radius: 8px; background: none; color: var(--accent); font-weight: 600; font-size: 15px; text-align: left; cursor: pointer; }
+.next small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
+.end { margin-top: 18px; font-family: var(--display); font-size: 20px; text-align: center; color: var(--ink-2); }
+
+/* Graph */
+.graph-pane { overflow: hidden; }
+#graph { width: 100%; height: 100%; display: block; touch-action: none; }
+.g-controls { position: absolute; top: 10px; left: 0; right: 0; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.g-controls > * { pointer-events: auto; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 15px; background: var(--leaf); font-size: 12.5px; cursor: pointer; }
+.chip[aria-pressed="false"] { color: var(--ink-2); background: var(--paper); }
+.chip[aria-pressed="false"] .dot { opacity: .3; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.dot.person, .bg-person { background: var(--c-person); } .dot.place, .bg-place { background: var(--c-place); }
+.dot.thing, .bg-thing { background: var(--c-thing); } .dot.group, .bg-group { background: var(--c-group); }
+.g-foot { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: space-between; align-items: end; gap: 8px; pointer-events: none; font-size: 11.5px; color: var(--ink-2); }
+.g-foot > * { pointer-events: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.legend i { display: inline-block; width: 18px; border-top: 1.5px solid var(--ink-2); vertical-align: middle; margin-right: 4px; }
+.legend i.dash { border-top-style: dashed; }
+.legend .ring { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--accent); border-radius: 50%; vertical-align: -1px; margin-right: 4px; }
+.g-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--ink-2); padding: 24px; }
+
+svg .lk { stroke: var(--ink-2); stroke-opacity: .45; stroke-width: 1.2; fill: none; }
+svg .lk.ended { stroke-dasharray: 4 4; stroke-opacity: .3; }
+svg .lk.new { stroke: var(--accent); stroke-opacity: .9; stroke-width: 1.8; }
+svg .lk-t { font: 500 10.5px var(--ui); fill: var(--ink-2); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; display: none; }
+svg .nd { cursor: pointer; }
+svg .nd circle.b { stroke: var(--paper); stroke-width: 2; }
+svg .nd.person circle.b { fill: var(--c-person); } svg .nd.place circle.b { fill: var(--c-place); }
+svg .nd.thing circle.b { fill: var(--c-thing); } svg .nd.group circle.b { fill: var(--c-group); }
+svg .nd text { font: 500 11.5px var(--ui); fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+svg .nd .ring { fill: none; stroke: var(--accent); stroke-width: 2; }
+svg .nd .pic-ring { fill: none; stroke-width: 2.5; }
+svg .nd.person .pic-ring { stroke: var(--c-person); } svg .nd.place .pic-ring { stroke: var(--c-place); }
+svg .nd.thing .pic-ring { stroke: var(--c-thing); } svg .nd.group .pic-ring { stroke: var(--c-group); }
+svg.has-sel .nd:not(.near) { opacity: .25; }
+svg.has-sel .lk:not(.near) { stroke-opacity: .08; }
+svg.has-sel .lk-t.near { display: block; }
+svg .nd.sel circle.b { stroke: var(--ink); stroke-width: 2.5; }
+@keyframes pulse { 0% { opacity: .9; } 100% { opacity: 0; transform: scale(1.9); } }
+svg .nd .ring.pulse { transform-box: fill-box; transform-origin: center; animation: pulse 1.6s ease-out 3; }
+
+/* Timeline */
+.tl-note { font-size: 13px; color: var(--ink-2); margin: 0 0 12px; max-width: 40em; }
+.tl { display: grid; grid-template-columns: max-content minmax(0, 1fr); border: 1px solid var(--rule); border-radius: 8px; background: var(--leaf); }
+.tl-names { border-right: 1px solid var(--rule); padding-top: 44px; }
+.tl-name { height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12.5px; white-space: nowrap; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border: 0; background: none; width: 100%; text-align: left; }
+.tl-sec { height: 28px; display: flex; align-items: end; padding: 0 10px 4px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+.tl-scroll { overflow-x: auto; }
+svg .tl-h { font: 500 11px var(--ui); fill: var(--ink-2); font-variant-numeric: tabular-nums; cursor: pointer; }
+svg .tl-h.cur { fill: var(--accent); font-weight: 600; }
+svg .tl-part { font: 600 10.5px var(--ui); fill: var(--ink-2); letter-spacing: .1em; }
+svg .tl-grid { stroke: var(--rule); stroke-width: 1; }
+svg .tl-cur { fill: var(--mark); }
+
+/* Index + log */
+.wrap { max-width: 44em; margin: 0 auto; display: grid; gap: 22px; }
+.search { width: 100%; height: 40px; border: 1px solid var(--rule); border-radius: 8px; background: var(--leaf); padding: 0 12px; font: 15px var(--ui); color: var(--ink); }
+.sec-h { display: flex; align-items: baseline; gap: 8px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 8px; }
+.sec-h .n { font-variant-numeric: tabular-nums; }
+.rows { display: grid; border-top: 1px solid var(--rule); }
+.row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 2px; border: 0; border-bottom: 1px solid var(--rule); background: none; text-align: left; cursor: pointer; }
+.row:hover { background: var(--leaf); }
+.row-n { font-size: 15px; font-weight: 500; }
+.row-s { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-c { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.pill { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; background: var(--mark); color: var(--accent); vertical-align: 1px; }
+.about { padding: 14px 16px; border: 1px solid var(--rule); border-radius: 8px; background: var(--leaf); font-size: 13.5px; line-height: 1.55; display: grid; gap: 8px; }
+.about p { margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--good); }
+.check::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.qs { display: grid; gap: 10px; }
+.qcard { padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--leaf); border-radius: 0 8px 8px 0; display: grid; gap: 4px; }
+.qcard.done { border-left-color: var(--rule); }
+.qcard .qq { font-weight: 600; font-size: 14px; }
+.qcard.done .qq { color: var(--ink-2); }
+.qcard .qa { font-size: 13.5px; }
+.qcard .qm { font-size: 12px; color: var(--ink-2); }
+.logs { display: grid; gap: 18px; }
+.log h3 { margin: 0 0 6px; font-family: var(--display); font-weight: 400; font-size: 20px; text-wrap: balance; }
+.log h3 .eyebrow { display: block; margin-bottom: 2px; font-family: var(--ui); }
+.log ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.log li { font-size: 13.5px; line-height: 1.45; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 8px; }
+.log li .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); padding-top: 2px; }
+.ent { border: 0; background: none; padding: 0; font-weight: 600; cursor: pointer; color: inherit; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+
+/* Entity sheet */
+.scrim { position: fixed; inset: 0; background: rgba(10, 15, 20, .35); z-index: 20; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; height: 80%; z-index: 21; background: var(--leaf); border-radius: 14px 14px 0 0; box-shadow: var(--shadow);
+  display: grid; grid-template-rows: auto minmax(0, 1fr); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet-h { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; padding-block: 14px 12px; border-bottom: 1px solid var(--rule); }
+.sheet-h h2 { margin: 4px 0 0; font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; text-wrap: balance; }
+.sheet-h .sub { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; }
+.x { width: 36px; height: 36px; border: 1px solid var(--rule); border-radius: 18px; background: var(--paper); font-size: 18px; cursor: pointer; }
+.sheet-b { overflow: auto; padding-block: 14px 30px; display: grid; gap: 22px; align-content: start; }
+.type { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+.pic { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.pic img, .pic .ph { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; border: 1px solid var(--rule); }
+.pic .ph { display: grid; place-items: center; background: var(--paper); color: var(--ink-2); font-size: 28px; font-family: var(--display); }
+.pic .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { height: 34px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); font-size: 13px; cursor: pointer; }
+.pic small { display: block; color: var(--ink-2); font-size: 12px; margin-top: 6px; }
+.facts { display: grid; gap: 12px; }
+.fact { display: grid; gap: 3px; }
+.fact .t { font-size: 14.5px; }
+.fact blockquote { margin: 0; font-family: var(--body); font-style: italic; font-size: 14.5px; color: var(--ink-2); }
+.fact .m { display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.fact.alias .t::before { content: "as the slim youth · "; color: var(--ink-2); }
+.links { display: grid; gap: 6px; }
+.lnk { font-size: 14px; }
+.lnk.ended { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--ink-2); }
+.lnk .r { color: var(--ink-2); }
+.scn { display: flex; flex-wrap: wrap; gap: 6px; }
+.scn button { min-width: 34px; height: 30px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); font-variant-numeric: tabular-nums; font-size: 12.5px; cursor: pointer; }
+.scn button.p { background: var(--ink); color: var(--leaf); border-color: var(--ink); }
+
+/* Wide screens: the reader stays on the left */
+@media (min-width: 960px) {
+  main { display: grid; grid-template-columns: minmax(400px, 46%) minmax(0, 1fr); }
+  .pane { position: relative; inset: auto; }
+  .pane.reader { grid-column: 1; grid-row: 1; border-right: 1px solid var(--rule); }
+  .pane:not(.reader) { grid-column: 2; grid-row: 1; }
+  .tabs { grid-template-columns: repeat(4, 1fr); }
+  .tab[data-tab="read"] { display: none; }
+  .dock { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); column-gap: 28px; align-items: center; }
+  .tabs { grid-column: 1 / -1; }
+  .sheet { left: auto; top: 0; height: auto; width: 420px; border-radius: 0; padding-right: env(safe-area-inset-right, 0px); }
+  .scrim { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  svg .nd .ring.pulse { animation: none; }
+  * { scroll-behavior: auto !important; }
+}
+</style>
+
+<div class="app">
+  <header class="top gutter">
+    <span class="brand">Book Graph</span>
+    <span class="book" id="book"></span>
+  </header>
+
+  <main>
+    <section class="pane reader" id="pane-read" aria-label="Story"><div class="gutter pane-pad"><div class="read-inner" id="reader"></div></div></section>
+    <section class="pane graph-pane" id="pane-graph" aria-label="Graph" hidden>
+      <svg id="graph" role="img" aria-label="Graph of people, places and things known so far"></svg>
+      <div class="g-controls gutter" id="g-controls"></div>
+      <div class="g-foot gutter">
+        <div class="legend"><span><i></i>true now</span><span><i class="dash"></i>no longer true</span><span><span class="ring"></span>new this scene</span></div>
+        <button class="chip" id="fit" type="button">Fit</button>
+      </div>
+      <div class="g-msg" id="g-msg" hidden></div>
+    </section>
+    <section class="pane" id="pane-timeline" aria-label="Timeline" hidden><div class="gutter pane-pad" id="timeline"></div></section>
+    <section class="pane" id="pane-index" aria-label="Index" hidden><div class="gutter pane-pad"><div class="wrap" id="index"></div></div></section>
+    <section class="pane" id="pane-log" aria-label="Log" hidden><div class="gutter pane-pad"><div class="wrap" id="log"></div></div></section>
+  </main>
+
+  <footer class="dock gutter">
+    <div class="rail">
+      <button class="step" id="prev" type="button" aria-label="Previous scene">‹</button>
+      <div class="where"><div class="where-k" id="where-k"></div><div class="where-t" id="where-t"></div></div>
+      <button class="step" id="next" type="button" aria-label="Next scene">›</button>
+    </div>
+    <div class="slider">
+      <input type="range" id="pos" min="1" max="15" step="1" aria-label="Reading position">
+      <div class="ticks" id="ticks"></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="read" type="button">Read</button>
+      <button class="tab" role="tab" data-tab="graph" type="button">Graph</button>
+      <button class="tab" role="tab" data-tab="timeline" type="button">Timeline</button>
+      <button class="tab" role="tab" data-tab="index" type="button">Index</button>
+      <button class="tab" role="tab" data-tab="log" type="button">Log</button>
+    </nav>
+  </footer>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="sheet-title"></aside>
+<input type="file" id="img-input" accept="image/*" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const D = /*__DATA__*/null;
+const N = D.scenes.length;
+const E = Object.fromEntries(D.entities.map(e => [e.id, e]));
+const TYPES = [['person', 'People'], ['place', 'Places'], ['thing', 'Things'], ['group', 'Groups']];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const wide = () => matchMedia('(min-width: 960px)').matches;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('bookgraph:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { if (v == null) localStorage.removeItem('bookgraph:' + k); else localStorage.setItem('bookgraph:' + k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+};
+const clampPos = p => Math.max(1, Math.min(N, Math.round(+p) || 1));
+const S = {
+  pos: clampPos(store.get('pos', 6)),
+  tab: store.get('tab', 'graph'),
+  view: null,          // scene shown in the reader when looking back
+  quote: null,         // quote to highlight in the reader
+  sel: null,           // entity open in the sheet
+  filters: { person: true, place: true, thing: true, group: true },
+  q: '',
+};
+
+/* ---------- Knowledge as of a position ---------- */
+const resolve = (id, p) => { const m = D.merges.find(m => m.from === id && p >= m.at); return m ? m.into : id; };
+const visible = (e, p) => e.first <= p && resolve(e.id, p) === e.id;
+const nameAt = (e, p) => { let n = e.names[0][1]; for (const x of e.names) if (x[0] <= p) n = x[1]; return n; };
+const obsAt = p => D.obs.filter(o => o[1] <= p).map(o => ({ e: resolve(o[0], p), orig: o[0], s: o[1], t: o[2], q: o[3] }));
+const relsAt = p => D.rels.filter(r => r[3] <= p).map(r => ({ a: resolve(r[0], p), b: resolve(r[1], p), label: r[2], s: r[3], q: r[4], end: r[5], ended: !!(r[5] && r[5] <= p) }));
+const present = (s, p) => new Set(s.present.map(id => resolve(id, p)));
+const mentioned = (s, p) => new Set(s.mentioned.map(id => resolve(id, p)));
+function weight(id, p) {
+  let w = 0;
+  for (const o of obsAt(p)) if (o.e === id) w++;
+  for (const r of relsAt(p)) if (r.a === id || r.b === id) w++;
+  for (const s of D.scenes) if (s.id <= p && present(s, p).has(id)) w++;
+  return w;
+}
+const isNew = (e, p) => e.first === p || e.names.some(n => n[0] === p && n[0] !== e.first) || D.merges.some(m => m.into === e.id && m.at === p);
+const partOf = id => D.scenes[id - 1].part;
+const scene = id => D.scenes[id - 1];
+
+// Quote check: each quote must appear in its own scene's text.
+const sceneText = D.scenes.map(s => s.paras.join('\n'));
+const quoteOK = (sid, q) => sceneText[sid - 1].includes(q);
+const allQuotes = [
+  ...D.obs.map(o => [o[1], o[3]]), ...D.rels.map(r => [r[3], r[4]]),
+  ...D.questions.flatMap(q => [[q.raised, q.rq], [q.answered, q.aq]]),
+  ...D.entities.flatMap(e => e.names.filter(n => n[2]).map(n => [n[0], n[2]])), ...D.merges.map(m => [m.at, m.quote]),
+];
+const verified = allQuotes.filter(([s, q]) => quoteOK(s, q)).length;
+// Anything whose quote fails is dropped, as the real pipeline would.
+D.obs = D.obs.filter(o => quoteOK(o[1], o[3]));
+D.rels = D.rels.filter(r => quoteOK(r[3], r[4]));
+
+/* ---------- Images (this browser only) ---------- */
+const imgOf = id => store.get('img:' + id, null);
+
+/* ---------- Typography helpers ---------- */
+function smart(s) { // same length, so indexes still line up
+  let o = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i], pr = i ? s[i - 1] : ' ';
+    if (c === '"') o += /[\s(\[—‘“]/.test(pr) ? '“' : '”';
+    else if (c === "'") o += /[\s(\[—“]/.test(pr) ? '‘' : '’';
+    else o += c;
+  }
+  return o;
+}
+function aliasIndex(sceneId) {
+  const map = new Map();
+  for (const e of D.entities) for (const [t, from, to] of e.match) {
+    if (from > S.pos || (to && sceneId > to)) continue;
+    if (!map.has(t)) map.set(t, resolve(e.id, S.pos));
+  }
+  for (const t of D.ignore) map.set(t, null);
+  const alts = [...map.keys()].sort((a, b) => b.length - a.length).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return { map, re: new RegExp('(^|[^A-Za-zé])(' + alts.join('|') + ')(?![A-Za-z])', 'g') };
+}
+function paraHTML(raw, ai, quote) {
+  const sm = smart(raw), spans = [];
+  ai.re.lastIndex = 0; let m;
+  while ((m = ai.re.exec(raw))) {
+    const st = m.index + m[1].length;
+    spans.push([st, st + m[2].length, ai.map.get(m[2])]);
+  }
+  const qi = quote ? raw.indexOf(quote) : -1, qe = qi + (quote ? quote.length : 0);
+  const cuts = new Set([0, raw.length]);
+  spans.forEach(s => { cuts.add(s[0]); cuts.add(s[1]); });
+  if (qi >= 0) { cuts.add(qi); cuts.add(qe); }
+  const pts = [...cuts].sort((a, b) => a - b);
+  let h = '';
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const sp = spans.find(s => s[0] <= a && b <= s[1]);
+    let seg = esc(sm.slice(a, b));
+    if (sp && sp[2]) seg = `<span class="nm t-${E[sp[2]].type}" role="button" tabindex="0" data-id="${sp[2]}">${seg}</span>`;
+    if (qi >= 0 && a >= qi && b <= qe) seg = `<mark class="q">${seg}</mark>`;
+    h += seg;
+  }
+  return h;
+}
+const entBtn = id => `<button class="ent" type="button" data-id="${id}">${esc(nameAt(E[id], S.pos))}</button>`;
+
+/* ---------- Dock ---------- */
+function renderDock() {
+  const s = scene(S.pos);
+  $('#where-k').textContent = `Part ${s.part} · Scene ${S.pos} of ${N}`;
+  $('#where-t').textContent = s.title;
+  $('#pos').value = S.pos;
+  $('#prev').disabled = S.pos <= 1; $('#next').disabled = S.pos >= N;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === S.tab)));
+}
+function renderTicks() {
+  $('#ticks').innerHTML = D.parts.map(pt => `<span style="left:${((pt.start - 1) / (N - 1)) * 100}%">${pt.n}</span>`).join('');
+}
+
+/* ---------- Reader ---------- */
+function renderReader() {
+  const sid = S.view || S.pos, s = scene(sid), ai = aliasIndex(sid);
+  const place = s.place ? `At ${esc(nameAt(E[s.place], S.pos))}` : 'Narration';
+  let h = '';
+  if (S.view && S.view !== S.pos) h += `<div class="viewing"><span>Looking back at scene ${sid}. You're at scene ${S.pos}.</span><button class="linkbtn" type="button" data-act="back">Return to scene ${S.pos}</button></div>`;
+  h += `<div class="eyebrow">Part ${s.part} · Scene ${sid}</div><h1 class="scene-title">${esc(s.title)}</h1><div class="scene-place">${place}</div>`;
+  if (!S.view || S.view === S.pos) {
+    const newE = D.entities.filter(e => visible(e, sid) && isNew(e, sid));
+    const nf = obsAt(sid).filter(o => o.s === sid).length, nr = relsAt(sid).filter(r => r.s === sid).length;
+    h += `<div class="added"><b>Added to the graph:</b> ${newE.length ? newE.map(e => entBtn(e.id)).join(', ') : 'no new names'} · ${nf} facts · ${nr} links</div>`;
+  }
+  h += `<div class="prose">${s.paras.map(p => `<p>${paraHTML(p, ai, S.quote && S.quote.s === sid ? S.quote.q : null)}</p>`).join('')}</div>`;
+  if (!S.view || S.view === S.pos) {
+    h += S.pos < N
+      ? `<button class="next" type="button" data-act="next"><small>Read on · Scene ${S.pos + 1}</small>${esc(scene(S.pos + 1).title)}</button>`
+      : `<div class="end">The end of the story.</div>`;
+  }
+  $('#reader').innerHTML = h;
+  const mk = $('#reader mark.q');
+  if (mk) requestAnimationFrame(() => mk.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' }));
+}
+
+/* ---------- Graph ---------- */
+let G = null;
+function initGraph() {
+  const svg = d3.select('#graph');
+  const root = svg.append('g');
+  const gl = root.append('g'), gt = root.append('g'), gn = root.append('g');
+  const zoom = d3.zoom().scaleExtent([0.25, 4]).on('zoom', ev => root.attr('transform', ev.transform));
+  svg.call(zoom).on('dblclick.zoom', null);
+  const sim = d3.forceSimulation()
+    .force('link', d3.forceLink().id(d => d.id).distance(78).strength(0.5))
+    .force('charge', d3.forceManyBody().strength(-260))
+    .force('x', d3.forceX(0).strength(0.06)).force('y', d3.forceY(0).strength(0.08))
+    .force('collide', d3.forceCollide().radius(d => d.r + 16));
+  G = { svg, root, gl, gt, gn, sim, zoom, nodes: new Map(), fitted: false };
+  sim.on('tick', tick);
+  new ResizeObserver(sizeGraph).observe($('#pane-graph'));
+  sizeGraph();
+}
+function sizeGraph() {
+  if (!G) return;
+  const r = $('#pane-graph').getBoundingClientRect();
+  if (!r.width) return;
+  G.svg.attr('viewBox', [-r.width / 2, -r.height / 2, r.width, r.height]);
+}
+function tick() {
+  G.gl.selectAll('line').attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  G.gt.selectAll('text').attr('x', d => (d.source.x + d.target.x) / 2).attr('y', d => (d.source.y + d.target.y) / 2);
+  G.gn.selectAll('g.nd').attr('transform', d => `translate(${d.x},${d.y})`);
+}
+function fitGraph(animate) {
+  if (!G) return;
+  const ns = [...G.sim.nodes()];
+  if (!ns.length) return;
+  const r = $('#pane-graph').getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const x0 = d3.min(ns, d => d.x - d.r - 60), x1 = d3.max(ns, d => d.x + d.r + 60);
+  const y0 = d3.min(ns, d => d.y - d.r - 20), y1 = d3.max(ns, d => d.y + d.r + 30);
+  const k = Math.min(1.6, Math.min(r.width / (x1 - x0), (r.height - 110) / (y1 - y0)));
+  const t = d3.zoomIdentity.translate(-k * (x0 + x1) / 2, -k * (y0 + y1) / 2 + 6).scale(k);
+  (animate && !reduced ? G.svg.transition().duration(500) : G.svg).call(G.zoom.transform, t);
+}
+function renderGraphControls() {
+  const p = S.pos;
+  $('#g-controls').innerHTML = TYPES.map(([t, label]) => {
+    const n = D.entities.filter(e => e.type === t && visible(e, p)).length;
+    return `<button class="chip" type="button" data-filter="${t}" aria-pressed="${S.filters[t]}"><span class="dot ${t}"></span>${label} ${n}</button>`;
+  }).join('');
+}
+function renderGraph() {
+  renderGraphControls();
+  if (!window.d3) { const m = $('#g-msg'); m.hidden = false; m.textContent = "The graph library didn't load. Check your connection and reload the page."; return; }
+  if (!G) initGraph();
+  const p = S.pos;
+  const ents = D.entities.filter(e => visible(e, p) && S.filters[e.type]);
+  const ids = new Set(ents.map(e => e.id));
+  const rels = relsAt(p).filter(r => ids.has(r.a) && ids.has(r.b) && r.a !== r.b);
+  const nodes = ents.map(e => {
+    let n = G.nodes.get(e.id);
+    if (!n) {
+      const nb = rels.find(r => (r.a === e.id && G.nodes.has(r.b)) || (r.b === e.id && G.nodes.has(r.a)));
+      const m = nb ? G.nodes.get(nb.a === e.id ? nb.b : nb.a) : null;
+      n = { id: e.id, x: (m ? m.x : 0) + (Math.random() - .5) * 60, y: (m ? m.y : 0) + (Math.random() - .5) * 60 };
+      G.nodes.set(e.id, n);
+    }
+    n.e = e; n.r = 7 + Math.sqrt(weight(e.id, p)) * 2.6; n.name = nameAt(e, p); n.fresh = isNew(e, p); n.img = imgOf(e.id);
+    return n;
+  });
+  const links = rels.map(r => ({ id: `${r.a}|${r.b}|${r.label}`, source: r.a, target: r.b, r }));
+
+  const near = new Set();
+  if (S.sel) { near.add(S.sel); rels.forEach(r => { if (r.a === S.sel) near.add(r.b); if (r.b === S.sel) near.add(r.a); }); }
+  G.svg.classed('has-sel', !!S.sel && ids.has(S.sel));
+
+  G.gl.selectAll('line').data(links, d => d.id).join('line')
+    .attr('class', d => 'lk' + (d.r.ended ? ' ended' : '') + (d.r.s === p && !d.r.ended ? ' new' : '') + (S.sel && (d.r.a === S.sel || d.r.b === S.sel) ? ' near' : ''));
+  G.gt.selectAll('text').data(links, d => d.id).join('text')
+    .attr('class', d => 'lk-t' + (S.sel && (d.r.a === S.sel || d.r.b === S.sel) ? ' near' : '')).attr('text-anchor', 'middle').attr('dy', -3)
+    .text(d => d.r.label);
+
+  const ng = G.gn.selectAll('g.nd').data(nodes, d => d.id).join(enter => {
+    const g = enter.append('g').attr('class', 'nd');
+    g.append('circle').attr('class', 'ring');
+    g.append('circle').attr('class', 'b');
+    g.append('text').attr('text-anchor', 'middle');
+    g.on('click', (ev, d) => { ev.stopPropagation(); openSheet(d.id); });
+    g.call(d3.drag()
+      .on('start', (ev, d) => { if (!ev.active) G.sim.alphaTarget(0.2).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+      .on('end', (ev, d) => { if (!ev.active) G.sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+    return g;
+  });
+  ng.attr('class', d => `nd ${d.e.type}${S.sel === d.id ? ' sel' : ''}${near.has(d.id) ? ' near' : ''}`)
+    .attr('aria-label', d => d.name);
+  ng.select('circle.b').attr('r', d => d.r);
+  ng.select('circle.ring').attr('r', d => d.r + 4).attr('opacity', d => d.fresh ? 1 : 0).classed('pulse', d => d.fresh);
+  ng.select('text').attr('y', d => d.r + 14).text(d => d.name);
+  ng.each(function (d) {
+    const g = d3.select(this);
+    g.selectAll('.pic, .pic-ring, clipPath').remove();
+    if (d.img) {
+      const cid = 'clip-' + d.id;
+      g.insert('clipPath', 'text').attr('id', cid).append('circle').attr('r', d.r);
+      g.insert('image', 'text').attr('class', 'pic').attr('href', d.img).attr('x', -d.r).attr('y', -d.r).attr('width', d.r * 2).attr('height', d.r * 2)
+        .attr('preserveAspectRatio', 'xMidYMid slice').attr('clip-path', `url(#${cid})`);
+      g.insert('circle', 'text').attr('class', 'pic-ring').attr('r', d.r);
+    }
+  });
+
+  G.sim.nodes(nodes);
+  G.sim.force('link').links(links);
+  if (reduced) { G.sim.alpha(1); for (let i = 0; i < 300; i++) G.sim.tick(); tick(); G.sim.stop(); }
+  else G.sim.alpha(0.7).restart();
+  if (!G.fitted) { G.fitted = true; setTimeout(() => fitGraph(false), reduced ? 0 : 900); }
+}
+
+/* ---------- Timeline ---------- */
+function renderTimeline() {
+  const p = S.pos, CW = 38, RH = 28, HH = 44;
+  const order = (a, b) => a.first - b.first || weight(b.id, p) - weight(a.id, p);
+  const people = D.entities.filter(e => (e.type === 'person' || e.type === 'group') && visible(e, p)).sort(order);
+  const places = D.entities.filter(e => e.type === 'place' && visible(e, p) && D.scenes.some(s => s.id <= p && s.place === e.id)).sort(order);
+  const cols = D.scenes.filter(s => s.id <= p);
+  const W = cols.length * CW + 16, H = HH + (people.length + 1 + places.length) * RH + 8;
+  const cx = id => 8 + (id - 1) * CW + CW / 2;
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Who appears in each scene">`;
+  svg += `<rect class="tl-cur" x="${cx(p) - CW / 2}" y="0" width="${CW}" height="${H}"/>`;
+  D.parts.filter(pt => pt.start <= p).forEach(pt => { svg += `<text class="tl-part" x="${cx(pt.start) - CW / 2 + 4}" y="14">PART ${pt.n}</text>`; if (pt.start > 1) svg += `<line class="tl-grid" x1="${cx(pt.start) - CW / 2}" x2="${cx(pt.start) - CW / 2}" y1="4" y2="${H}"/>`; });
+  cols.forEach(s => { svg += `<text class="tl-h${s.id === p ? ' cur' : ''}" data-scene="${s.id}" x="${cx(s.id)}" y="36" text-anchor="middle">${s.id}</text>`; });
+  const rowY = i => HH + i * RH + RH / 2;
+  people.forEach((e, i) => {
+    const y = rowY(i), col = `var(--l${(i % 8) + 1})`;
+    svg += `<line class="tl-grid" x1="0" x2="${W}" y1="${y}" y2="${y}" stroke-dasharray="1 4"/>`;
+    const pres = cols.filter(s => present(s, p).has(e.id)).map(s => s.id);
+    for (let k = 0; k < pres.length - 1; k++) svg += `<line x1="${cx(pres[k])}" x2="${cx(pres[k + 1])}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="3" stroke-linecap="round" opacity="${pres[k + 1] - pres[k] === 1 ? .9 : .35}"/>`;
+    cols.forEach(s => {
+      if (present(s, p).has(e.id)) svg += `<circle cx="${cx(s.id)}" cy="${y}" r="6" fill="${col}"/>`;
+      else if (mentioned(s, p).has(e.id)) svg += `<circle cx="${cx(s.id)}" cy="${y}" r="4" fill="var(--leaf)" stroke="${col}" stroke-width="1.5"/>`;
+    });
+  });
+  const py0 = people.length + 1;
+  places.forEach((e, i) => {
+    const y = rowY(py0 + i);
+    svg += `<line class="tl-grid" x1="0" x2="${W}" y1="${y}" y2="${y}" stroke-dasharray="1 4"/>`;
+    cols.forEach(s => {
+      if (s.place === e.id) svg += `<rect x="${cx(s.id) - 7}" y="${y - 7}" width="14" height="14" rx="3" fill="var(--c-place)"/>`;
+      else if (mentioned(s, p).has(e.id)) svg += `<rect x="${cx(s.id) - 4}" y="${y - 4}" width="8" height="8" rx="2" fill="var(--leaf)" stroke="var(--c-place)" stroke-width="1.5"/>`;
+    });
+  });
+  svg += `</svg>`;
+  const nameRow = (e, i, col) => `<button class="tl-name" type="button" data-id="${e.id}"><span class="dot" style="background:${col}"></span>${esc(nameAt(e, p))}</button>`;
+  const names = people.map((e, i) => nameRow(e, i, `var(--l${(i % 8) + 1})`)).join('') + `<div class="tl-sec">Places</div>` + places.map(e => nameRow(e, 0, 'var(--c-place)')).join('');
+  $('#timeline').innerHTML = `<p class="tl-note">Filled dots: on stage in that scene. Hollow dots: mentioned. Tap a scene number to read it again.</p>
+    <div class="tl"><div class="tl-names">${names}</div><div class="tl-scroll" id="tl-scroll">${svg}</div></div>`;
+  const sc = $('#tl-scroll'); sc.scrollLeft = sc.scrollWidth;
+}
+
+/* ---------- Index ---------- */
+function renderIndex() {
+  const p = S.pos, q = S.q.trim().toLowerCase();
+  const ob = obsAt(p), rl = relsAt(p);
+  let h = `<input class="search" id="search" type="search" placeholder="Search names" value="${esc(S.q)}" aria-label="Search names">`;
+  for (const [t, label] of TYPES) {
+    const list = D.entities.filter(e => e.type === t && visible(e, p))
+      .filter(e => !q || e.names.some(n => n[0] <= p && n[1].toLowerCase().includes(q)))
+      .sort((a, b) => weight(b.id, p) - weight(a.id, p));
+    if (!list.length) continue;
+    h += `<section><h2 class="sec-h">${label} <span class="n">${list.length}</span></h2><div class="rows">` + list.map(e => {
+      const f = ob.filter(o => o.e === e.id).length, l = rl.filter(r => r.a === e.id || r.b === e.id).length;
+      const older = e.names.filter(n => n[0] <= p).map(n => n[1]).filter(n => n !== nameAt(e, p));
+      const sub = older.length ? 'Earlier: ' + older.join(', ') : (ob.filter(o => o.e === e.id).slice(-1)[0] || {}).t || '';
+      return `<button class="row" type="button" data-id="${e.id}"><span class="dot ${t}"></span><span style="min-width:0"><div class="row-n">${esc(nameAt(e, p))} ${isNew(e, p) ? '<span class="pill">New</span>' : ''}</div><div class="row-s">${esc(sub)}</div></span><span class="row-c">${f} facts<br>${l} links</span></button>`;
+    }).join('') + `</div></section>`;
+  }
+  $('#index').innerHTML = h;
+}
+
+/* ---------- Log ---------- */
+function renderLog() {
+  const p = S.pos;
+  let h = `<div class="about">
+    <p><b>Prototype.</b> Claude read this story ahead of time and bundled what it found into this page, so nothing is sent anywhere while you read. Every fact carries a quote, and the page checks each one against the text of its own scene before showing it.</p>
+    <div class="check">${verified} of ${allQuotes.length} quotes found word for word in their scene</div>
+    <p style="color:var(--ink-2)">Text: ${esc(D.book.source)}. Pictures you add stay in this browser only.</p></div>`;
+  const qs = D.questions.filter(q => q.raised <= p).sort((a, b) => (a.answered <= p) - (b.answered <= p) || b.raised - a.raised);
+  if (qs.length) {
+    const open = qs.filter(q => q.answered > p).length;
+    h += `<section><h2 class="sec-h">Questions <span class="n">${open} open</span></h2><div class="qs">` + qs.map(q => {
+      const done = q.answered <= p;
+      return `<div class="qcard${done ? ' done' : ''}"><div class="qq">${esc(q.q)}</div>${done ? `<div class="qa">${esc(q.a)}</div>` : ''}
+        <div class="qm">Raised in scene ${q.raised}${done ? ` · answered in scene ${q.answered}` : ''} · <button class="linkbtn" type="button" data-show="${done ? q.answered : q.raised}" data-q="${esc(done ? q.aq : q.rq)}">Show in text</button></div></div>`;
+    }).join('') + `</div></section>`;
+  }
+  h += `<section><h2 class="sec-h">What each scene added</h2><div class="logs">`;
+  for (let sid = p; sid >= 1; sid--) {
+    const s = scene(sid), items = [];
+    D.entities.filter(e => e.first === sid).forEach(e => items.push(['New', `${entBtn(e.id)} <span style="color:var(--ink-2)">· ${e.type}</span>`]));
+    D.entities.forEach(e => e.names.forEach(n => { if (n[0] === sid && n[0] !== e.first) items.push(['Named', `${esc(e.names.filter(x => x[0] < sid).slice(-1)[0][1])} is ${entBtn(e.id)}`]); }));
+    D.merges.filter(m => m.at === sid).forEach(m => items.push(['Revealed', `${esc(nameAt(E[m.from], sid - 1))} was ${entBtn(m.into)}`]));
+    D.obs.filter(o => o[1] === sid).forEach(o => items.push(['Fact', `${entBtn(resolve(o[0], p))}: ${esc(o[2])}`]));
+    D.rels.filter(r => r[3] === sid).forEach(r => items.push(['Link', `${entBtn(resolve(r[0], p))} ${esc(r[2])} ${entBtn(resolve(r[1], p))}`]));
+    D.rels.filter(r => r[5] === sid).forEach(r => items.push(['Ended', `${entBtn(resolve(r[0], p))} ${esc(r[2])} ${entBtn(resolve(r[1], p))}`]));
+    D.questions.filter(q => q.raised === sid).forEach(q => items.push(['Question', esc(q.q)]));
+    D.questions.filter(q => q.answered === sid && q.answered <= p).forEach(q => items.push(['Answered', `${esc(q.q)} ${esc(q.a)}`]));
+    h += `<article class="log"><h3><span class="eyebrow">Part ${s.part} · Scene ${sid}</span>${esc(s.title)}</h3><ul>${items.map(([k, v]) => `<li><span class="k">${k}</span><span>${v}</span></li>`).join('')}</ul></article>`;
+  }
+  h += `</div></section>`;
+  $('#log').innerHTML = h;
+}
+
+/* ---------- Entity sheet ---------- */
+function openSheet(id) { S.sel = id; renderSheet(); renderGraph(); }
+function closeSheet() { S.sel = null; $('#sheet').hidden = true; $('#scrim').hidden = true; renderGraph(); }
+function renderSheet() {
+  const id = S.sel; if (!id) return;
+  const p = S.pos, e = E[id];
+  const tlabel = { person: 'Person', place: 'Place', thing: 'Thing', group: 'Group' }[e.type];
+  const older = e.names.filter(n => n[0] <= p).map(n => n[1]).filter(n => n !== nameAt(e, p));
+  const merged = D.merges.filter(m => m.into === id && m.at <= p);
+  const aka = [...older, ...merged.map(m => nameAt(E[m.from], m.at - 1))];
+  const ob = obsAt(p).filter(o => o.e === id).sort((a, b) => b.s - a.s);
+  const rl = relsAt(p).filter(r => r.a === id || r.b === id).sort((a, b) => a.ended - b.ended || b.s - a.s);
+  const scs = D.scenes.filter(s => s.id <= p && (present(s, p).has(id) || mentioned(s, p).has(id) || s.place === id));
+  const qs = D.questions.filter(q => q.raised <= p && q.about.map(a => resolve(a, p)).includes(id));
+  const img = imgOf(id);
+  let h = `<div class="sheet-h gutter"><div><span class="type"><span class="dot ${e.type}"></span>${tlabel} · first seen in scene ${e.first}</span>
+      <h2 id="sheet-title">${esc(nameAt(e, p))}</h2>${aka.length ? `<div class="sub">Also known as ${aka.map(esc).join(', ')}</div>` : ''}</div>
+      <button class="x" type="button" data-act="close" aria-label="Close">×</button></div><div class="sheet-b gutter">`;
+  h += `<div class="pic">${img ? `<img src="${img}" alt="Picture added for ${esc(nameAt(e, p))}">` : `<div class="ph" aria-hidden="true">${esc(nameAt(e, p).replace(/^The /, '').charAt(0))}</div>`}
+      <div><div class="acts"><button class="btn" type="button" data-act="img">${img ? 'Replace picture' : 'Add a picture'}</button>${img ? '<button class="btn" type="button" data-act="unimg">Remove</button>' : ''}</div>
+      <small>Shows on the graph. Saved in this browser only.</small></div></div>`;
+  if (ob.length) h += `<section><h3 class="sec-h">Known so far <span class="n">${ob.length}</span></h3><div class="facts">` + ob.map(o => `
+      <div class="fact${o.orig !== id ? ' alias' : ''}"><div class="t">${esc(o.t)}</div><blockquote>${esc(smart('"' + o.q + '"'))}</blockquote>
+      <div class="m">Scene ${o.s} <button class="linkbtn" type="button" data-show="${o.s}" data-q="${esc(o.q)}">Show in text</button></div></div>`).join('') + `</div></section>`;
+  if (rl.length) h += `<section><h3 class="sec-h">Links <span class="n">${rl.length}</span></h3><div class="links">` + rl.map(r => {
+      const txt = r.a === id ? `<span class="r">${esc(r.label)}</span> ${entBtn(r.b)}` : `${entBtn(r.a)} <span class="r">${esc(r.label)}</span>`;
+      return `<div class="lnk${r.ended ? ' ended' : ''}">${txt}${r.ended ? ` <span class="r">(until scene ${r.end})</span>` : ''}</div>`;
+    }).join('') + `</div></section>`;
+  if (qs.length) h += `<section><h3 class="sec-h">Questions</h3><div class="qs">` + qs.map(q => {
+      const done = q.answered <= p;
+      return `<div class="qcard${done ? ' done' : ''}"><div class="qq">${esc(q.q)}</div>${done ? `<div class="qa">${esc(q.a)}</div>` : '<div class="qm">Still open</div>'}</div>`;
+    }).join('') + `</div></section>`;
+  h += `<section><h3 class="sec-h">Scenes</h3><div class="scn">${scs.map(s => `<button type="button" class="${present(s, p).has(id) || s.place === id ? 'p' : ''}" data-show="${s.id}" title="${esc(s.title)}">${s.id}</button>`).join('')}</div></section>`;
+  h += `</div>`;
+  const sh = $('#sheet'); sh.innerHTML = h; sh.hidden = false; $('#scrim').hidden = false;
+}
+
+/* ---------- Navigation ---------- */
+function showTab(tab) {
+  if (wide() && tab === 'read') tab = 'graph';
+  S.tab = tab; store.set('tab', tab);
+  ['graph', 'timeline', 'index', 'log'].forEach(t => { $('#pane-' + t).hidden = t !== tab; });
+  $('#pane-read').hidden = !(wide() || tab === 'read');
+  renderDock();
+  if (tab === 'graph') { renderGraph(); requestAnimationFrame(sizeGraph); }
+  if (tab === 'timeline') renderTimeline();
+  if (tab === 'index') renderIndex();
+  if (tab === 'log') renderLog();
+}
+function setPos(p, opts = {}) {
+  p = clampPos(p);
+  if (p === S.pos && !opts.force) return;
+  S.pos = p; S.view = null; S.quote = null; store.set('pos', p);
+  renderAll();
+  if (!opts.keepScroll) $('#pane-read').scrollTop = 0;
+}
+function showInText(sid, q) {
+  S.view = sid === S.pos ? null : sid; S.quote = q ? { s: sid, q } : null;
+  if (S.sel && !wide()) closeSheet();
+  if (!wide()) showTab('read');
+  renderReader();
+  if (!q) $('#pane-read').scrollTop = 0;
+}
+function renderAll() {
+  renderDock(); renderReader();
+  if (S.tab === 'graph') renderGraph();
+  if (S.tab === 'timeline') renderTimeline();
+  if (S.tab === 'index') renderIndex();
+  if (S.tab === 'log') renderLog();
+  if (S.sel) { if (visible(E[S.sel], S.pos)) renderSheet(); else closeSheet(); }
+}
+
+/* ---------- Pictures ---------- */
+function addPicture(file, id) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 320 / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const ok = store.set('img:' + id, c.toDataURL('image/jpeg', 0.82));
+      if (!ok) alertInSheet("This browser won't save pictures here. Try a smaller image, or a normal (not private) window.");
+      renderSheet(); renderGraph(); if (S.tab === 'index') renderIndex();
+    };
+    im.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+function alertInSheet(msg) { const b = $('#sheet .sheet-b'); if (b) b.insertAdjacentHTML('afterbegin', `<div class="viewing">${esc(msg)}</div>`); }
+
+/* ---------- Events ---------- */
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-id], [data-act], [data-show], [data-filter], [data-scene], .tab');
+  if (!t) return;
+  if (t.classList.contains('tab')) return showTab(t.dataset.tab);
+  if (t.dataset.filter) { S.filters[t.dataset.filter] = !S.filters[t.dataset.filter]; return renderGraph(); }
+  if (t.dataset.show) return showInText(+t.dataset.show, t.dataset.q || null);
+  if (t.dataset.scene) return showInText(+t.dataset.scene, null);
+  if (t.dataset.id) return openSheet(t.dataset.id);
+  const a = t.dataset.act;
+  if (a === 'next') return setPos(S.pos + 1);
+  if (a === 'back') { S.view = null; S.quote = null; renderReader(); $('#pane-read').scrollTop = 0; return; }
+  if (a === 'close') return closeSheet();
+  if (a === 'img') { const i = $('#img-input'); i.dataset.for = S.sel; i.value = ''; i.click(); return; }
+  if (a === 'unimg') { store.set('img:' + S.sel, null); renderSheet(); renderGraph(); return; }
+});
+document.addEventListener('keydown', ev => {
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('nm')) { ev.preventDefault(); openSheet(ev.target.dataset.id); }
+  if (ev.key === 'Escape' && S.sel) closeSheet();
+});
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'search') { S.q = ev.target.value; const pos = ev.target.selectionStart; renderIndex(); const s = $('#search'); s.focus(); s.setSelectionRange(pos, pos); }
+});
+$('#scrim').addEventListener('click', closeSheet);
+$('#prev').addEventListener('click', () => setPos(S.pos - 1));
+$('#next').addEventListener('click', () => setPos(S.pos + 1));
+$('#pos').addEventListener('input', ev => setPos(ev.target.value));
+$('#fit').addEventListener('click', () => fitGraph(true));
+$('#img-input').addEventListener('change', ev => { const f = ev.target.files[0]; if (f) addPicture(f, ev.target.dataset.for); });
+matchMedia('(min-width: 960px)').addEventListener('change', () => showTab(S.tab));
+
+/* ---------- Start ---------- */
+$('#book').innerHTML = `${esc(D.book.title)}<small>${esc(D.book.author)}, ${D.book.year}</small>`;
+$('#pos').max = N;
+renderTicks();
+renderReader();
+showTab(['read', 'graph', 'timeline', 'index', 'log'].includes(S.tab) ? S.tab : 'graph');
+</script>
