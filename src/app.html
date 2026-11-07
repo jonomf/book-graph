@@ -55,10 +55,27 @@ button { font: inherit; color: inherit; }
 .gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
 /* Header */
-.top { display: flex; align-items: baseline; gap: 12px; padding-block: 10px 8px; border-bottom: 1px solid var(--rule); background: var(--paper); }
+.top { display: flex; align-items: center; gap: 12px; padding-block: 10px 8px; border-bottom: 1px solid var(--rule); background: var(--paper); }
 .brand { font-family: var(--ui); font-weight: 600; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
-.book { min-width: 0; font-family: var(--display); font-size: 19px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.book small { font-family: var(--ui); font-size: 12px; color: var(--ink-2); margin-left: 6px; }
+.book { min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 4px 8px 4px 0; border-radius: 8px; cursor: pointer; text-align: left; }
+.book-t { min-width: 0; font-family: var(--display); font-size: 19px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.book-a { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.book svg { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.book:hover .book-t { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 4px; }
+@media (max-width: 520px) { .book-a { display: none; } }
+
+/* Library */
+.shelf { display: grid; gap: 12px; }
+.vol { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; align-items: start; width: 100%; padding: 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper); text-align: left; cursor: pointer; }
+.vol:hover { border-color: var(--ink-2); }
+.vol[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.cover { width: 54px; height: 74px; border-radius: 2px 6px 6px 2px; display: grid; place-items: center; color: var(--leaf); font-family: var(--display); font-size: 22px; box-shadow: inset 4px 0 0 rgba(0, 0, 0, .18); }
+.vol-t { font-family: var(--display); font-size: 21px; line-height: 1.15; text-wrap: balance; }
+.vol-m { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.vol-p { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-top: 10px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.prog { height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+.prog i { display: block; height: 100%; background: var(--accent); }
+.shelf-note { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin: 0; }
 
 /* Panes */
 main { position: relative; min-height: 0; }
@@ -208,7 +225,6 @@ svg .tl-cur { fill: var(--mark); }
 .fact .t { font-size: 14.5px; }
 .fact blockquote { margin: 0; font-family: var(--body); font-style: italic; font-size: 14.5px; color: var(--ink-2); }
 .fact .m { display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.fact.alias .t::before { content: "as the slim youth · "; color: var(--ink-2); }
 .links { display: grid; gap: 6px; }
 .lnk { font-size: 14px; }
 .lnk.ended { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--ink-2); }
@@ -239,7 +255,7 @@ svg .tl-cur { fill: var(--mark); }
 <div class="app">
   <header class="top gutter">
     <span class="brand">Book Graph</span>
-    <span class="book" id="book"></span>
+    <button class="book" id="book" type="button" aria-haspopup="dialog" aria-label="Change book"></button>
   </header>
 
   <main>
@@ -284,9 +300,8 @@ svg .tl-cur { fill: var(--mark); }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
-const D = /*__DATA__*/null;
-const N = D.scenes.length;
-const E = Object.fromEntries(D.entities.map(e => [e.id, e]));
+const LIB = /*__DATA__*/null;
+let D, N, E, sceneText = [], allQuotes = [], verified = 0; // the open book
 const TYPES = [['person', 'People'], ['place', 'Places'], ['thing', 'Things'], ['group', 'Groups']];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -299,7 +314,9 @@ const store = {
 };
 const clampPos = p => Math.max(1, Math.min(N, Math.round(+p) || 1));
 const S = {
-  pos: clampPos(store.get('pos', 6)),
+  book: null,
+  pos: 1,
+  lib: false,          // library sheet open
   tab: store.get('tab', 'graph'),
   view: null,          // scene shown in the reader when looking back
   quote: null,         // quote to highlight in the reader
@@ -327,21 +344,57 @@ const isNew = (e, p) => e.first === p || e.names.some(n => n[0] === p && n[0] !=
 const partOf = id => D.scenes[id - 1].part;
 const scene = id => D.scenes[id - 1];
 
+const partLabel = s => s.part ? `Part ${s.part} · ` : '';
+const akaAt = (e, p) => (e.aka || []).filter(a => a[0] <= p).map(a => a[1]);
+const mergeOf = id => D.merges.find(m => m.from === id);
+
 // Quote check: each quote must appear in its own scene's text.
-const sceneText = D.scenes.map(s => s.paras.join('\n'));
 const quoteOK = (sid, q) => sceneText[sid - 1].includes(q);
-const allQuotes = [
-  ...D.obs.map(o => [o[1], o[3]]), ...D.rels.map(r => [r[3], r[4]]),
-  ...D.questions.flatMap(q => [[q.raised, q.rq], [q.answered, q.aq]]),
-  ...D.entities.flatMap(e => e.names.filter(n => n[2]).map(n => [n[0], n[2]])), ...D.merges.map(m => [m.at, m.quote]),
-];
-const verified = allQuotes.filter(([s, q]) => quoteOK(s, q)).length;
-// Anything whose quote fails is dropped, as the real pipeline would.
-D.obs = D.obs.filter(o => quoteOK(o[1], o[3]));
-D.rels = D.rels.filter(r => quoteOK(r[3], r[4]));
+
+/* ---------- Opening a book ---------- */
+function loadBook(id) {
+  D = LIB.books.find(b => b.id === id) || LIB.books[0];
+  N = D.scenes.length;
+  E = Object.fromEntries(D.entities.map(e => [e.id, e]));
+  sceneText = D.scenes.map(s => s.paras.join('\n'));
+  allQuotes = [
+    ...D.obs.map(o => [o[1], o[3]]), ...D.rels.map(r => [r[3], r[4]]),
+    ...D.questions.flatMap(q => [[q.raised, q.rq], [q.answered, q.aq]]),
+    ...D.entities.flatMap(e => [...e.names.filter(n => n[2]).map(n => [n[0], n[2]]), ...e.aka.map(a => [a[0], a[2]])]),
+    ...D.merges.map(m => [m.at, m.quote]),
+  ];
+  verified = allQuotes.filter(([s, q]) => quoteOK(s, q)).length;
+  if (!D.checked) { // anything whose quote fails is dropped, as the real pipeline would
+    D.obs = D.obs.filter(o => quoteOK(o[1], o[3]));
+    D.rels = D.rels.filter(r => quoteOK(r[3], r[4]));
+    D.checked = true;
+  }
+  S.book = D.id; store.set('book', D.id);
+  const legacy = D.id === 'scandal-in-bohemia' ? store.get('pos', null) : null; // position saved before there were two books
+  S.pos = clampPos(store.get('pos:' + D.id, legacy == null ? D.defaultPos : legacy));
+  S.view = null; S.quote = null; S.sel = null; S.q = '';
+  resetGraph();
+  $('#book').innerHTML = `<span class="book-t">${esc(D.book.title)}</span><span class="book-a">${esc(D.book.author)}, ${D.book.year}</span>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>`;
+  $('#pos').max = N;
+  renderTicks();
+  if (location.hash.slice(1) !== D.id) location.hash = D.id;
+}
+function switchBook(id) {
+  if (id === S.book) { closeSheet(); return; }
+  closeSheet();
+  loadBook(id);
+  renderReader(); $('#pane-read').scrollTop = 0;
+  showTab(S.tab);
+}
+const savedPos = b => {
+  const legacy = b.id === 'scandal-in-bohemia' ? store.get('pos', null) : null;
+  return store.get('pos:' + b.id, legacy);
+};
 
 /* ---------- Images (this browser only) ---------- */
-const imgOf = id => store.get('img:' + id, null);
+const imgKey = id => 'img:' + S.book + ':' + id;
+const imgOf = id => store.get(imgKey(id), S.book === 'scandal-in-bohemia' ? store.get('img:' + id, null) : null);
 
 /* ---------- Typography helpers ---------- */
 function smart(s) { // same length, so indexes still line up
@@ -392,7 +445,7 @@ const entBtn = id => `<button class="ent" type="button" data-id="${id}">${esc(na
 /* ---------- Dock ---------- */
 function renderDock() {
   const s = scene(S.pos);
-  $('#where-k').textContent = `Part ${s.part} · Scene ${S.pos} of ${N}`;
+  $('#where-k').textContent = `${partLabel(s)}Scene ${S.pos} of ${N}`;
   $('#where-t').textContent = s.title;
   $('#pos').value = S.pos;
   $('#prev').disabled = S.pos <= 1; $('#next').disabled = S.pos >= N;
@@ -408,7 +461,7 @@ function renderReader() {
   const place = s.place ? `At ${esc(nameAt(E[s.place], S.pos))}` : 'Narration';
   let h = '';
   if (S.view && S.view !== S.pos) h += `<div class="viewing"><span>Looking back at scene ${sid}. You're at scene ${S.pos}.</span><button class="linkbtn" type="button" data-act="back">Return to scene ${S.pos}</button></div>`;
-  h += `<div class="eyebrow">Part ${s.part} · Scene ${sid}</div><h1 class="scene-title">${esc(s.title)}</h1><div class="scene-place">${place}</div>`;
+  h += `<div class="eyebrow">${partLabel(s)}Scene ${sid}</div><h1 class="scene-title">${esc(s.title)}</h1><div class="scene-place">${place}</div>`;
   if (!S.view || S.view === S.pos) {
     const newE = D.entities.filter(e => visible(e, sid) && isNew(e, sid));
     const nf = obsAt(sid).filter(o => o.s === sid).length, nr = relsAt(sid).filter(r => r.s === sid).length;
@@ -593,8 +646,9 @@ function renderIndex() {
     if (!list.length) continue;
     h += `<section><h2 class="sec-h">${label} <span class="n">${list.length}</span></h2><div class="rows">` + list.map(e => {
       const f = ob.filter(o => o.e === e.id).length, l = rl.filter(r => r.a === e.id || r.b === e.id).length;
-      const older = e.names.filter(n => n[0] <= p).map(n => n[1]).filter(n => n !== nameAt(e, p));
-      const sub = older.length ? 'Earlier: ' + older.join(', ') : (ob.filter(o => o.e === e.id).slice(-1)[0] || {}).t || '';
+      const older = [...e.names.filter(n => n[0] <= p).map(n => n[1]).filter(n => n !== nameAt(e, p)), ...akaAt(e, p),
+        ...D.merges.filter(m => m.into === e.id && m.at <= p).flatMap(m => [nameAt(E[m.from], m.at - 1), ...akaAt(E[m.from], p)])];
+      const sub = older.length ? 'Also: ' + older.join(', ') : (ob.filter(o => o.e === e.id).slice(-1)[0] || {}).t || '';
       return `<button class="row" type="button" data-id="${e.id}"><span class="dot ${t}"></span><span style="min-width:0"><div class="row-n">${esc(nameAt(e, p))} ${isNew(e, p) ? '<span class="pill">New</span>' : ''}</div><div class="row-s">${esc(sub)}</div></span><span class="row-c">${f} facts<br>${l} links</span></button>`;
     }).join('') + `</div></section>`;
   }
@@ -622,28 +676,61 @@ function renderLog() {
     const s = scene(sid), items = [];
     D.entities.filter(e => e.first === sid).forEach(e => items.push(['New', `${entBtn(e.id)} <span style="color:var(--ink-2)">· ${e.type}</span>`]));
     D.entities.forEach(e => e.names.forEach(n => { if (n[0] === sid && n[0] !== e.first) items.push(['Named', `${esc(e.names.filter(x => x[0] < sid).slice(-1)[0][1])} is ${entBtn(e.id)}`]); }));
+    D.entities.forEach(e => e.aka.forEach(a => { if (a[0] === sid) items.push(['Alias', `${entBtn(resolve(e.id, p))} also goes by ${esc(a[1])}`]); }));
     D.merges.filter(m => m.at === sid).forEach(m => items.push(['Revealed', `${esc(nameAt(E[m.from], sid - 1))} was ${entBtn(m.into)}`]));
     D.obs.filter(o => o[1] === sid).forEach(o => items.push(['Fact', `${entBtn(resolve(o[0], p))}: ${esc(o[2])}`]));
     D.rels.filter(r => r[3] === sid).forEach(r => items.push(['Link', `${entBtn(resolve(r[0], p))} ${esc(r[2])} ${entBtn(resolve(r[1], p))}`]));
     D.rels.filter(r => r[5] === sid).forEach(r => items.push(['Ended', `${entBtn(resolve(r[0], p))} ${esc(r[2])} ${entBtn(resolve(r[1], p))}`]));
     D.questions.filter(q => q.raised === sid).forEach(q => items.push(['Question', esc(q.q)]));
     D.questions.filter(q => q.answered === sid && q.answered <= p).forEach(q => items.push(['Answered', `${esc(q.q)} ${esc(q.a)}`]));
-    h += `<article class="log"><h3><span class="eyebrow">Part ${s.part} · Scene ${sid}</span>${esc(s.title)}</h3><ul>${items.map(([k, v]) => `<li><span class="k">${k}</span><span>${v}</span></li>`).join('')}</ul></article>`;
+    h += `<article class="log"><h3><span class="eyebrow">${partLabel(s)}Scene ${sid}</span>${esc(s.title)}</h3><ul>${items.map(([k, v]) => `<li><span class="k">${k}</span><span>${v}</span></li>`).join('')}</ul></article>`;
   }
   h += `</div></section>`;
   $('#log').innerHTML = h;
 }
 
 /* ---------- Entity sheet ---------- */
-function openSheet(id) { S.sel = id; renderSheet(); renderGraph(); }
-function closeSheet() { S.sel = null; $('#sheet').hidden = true; $('#scrim').hidden = true; renderGraph(); }
+function openSheet(id) { S.lib = false; S.sel = id; renderSheet(); renderGraph(); }
+function closeSheet() {
+  const had = S.sel;
+  S.sel = null; S.lib = false; $('#sheet').hidden = true; $('#scrim').hidden = true;
+  if (had) renderGraph();
+}
+function openLibrary() {
+  const had = S.sel; S.sel = null; S.lib = true;
+  if (had) renderGraph();
+  const covers = ['var(--accent)', 'var(--l2)', 'var(--l4)', 'var(--l5)'];
+  let h = `<div class="sheet-h gutter"><div><span class="type">${LIB.books.length} books</span><h2 id="sheet-title">Library</h2></div>
+      <button class="x" type="button" data-act="close" aria-label="Close">×</button></div><div class="sheet-b gutter"><div class="shelf">`;
+  LIB.books.forEach((b, i) => {
+    const sp = savedPos(b), n = b.scenes.length, cur = b.id === S.book;
+    const num = (b.book.source.match(/Adventure ([IVX]+)$/) || [])[1] || b.book.title.charAt(0);
+    const at = cur ? S.pos : sp;
+    h += `<button class="vol" type="button" data-book="${b.id}" aria-current="${cur}">
+      <span class="cover" style="background:${covers[i % covers.length]}" aria-hidden="true">${esc(num)}</span>
+      <span style="min-width:0"><span class="vol-t">${esc(b.book.title)}</span>
+      <div class="vol-m">${esc(b.book.author)} · ${b.book.year} · ${n} scenes · ${b.entities.length} names</div>
+      <div class="vol-p">${at ? `<span class="prog"><i style="width:${(at / n) * 100}%"></i></span><span>${cur ? '<span class="pill">Reading</span> ' : ''}Scene ${at} of ${n}</span>` : `<span class="prog"><i style="width:0"></i></span><span>Not started</span>`}</div></span>
+    </button>`;
+  });
+  h += `</div><p class="shelf-note">Both stories are from The Adventures of Sherlock Holmes (1892). Each book keeps its own reading position and pictures in this browser.</p></div>`;
+  const sh = $('#sheet'); sh.innerHTML = h; sh.hidden = false; $('#scrim').hidden = false;
+  const b = sh.querySelector('.vol[aria-current="true"]'); if (b) b.focus();
+}
+function resetGraph() {
+  if (!G) return;
+  G.sim.stop(); G.sim.nodes([]); G.sim.force('link').links([]);
+  G.gl.selectAll('*').remove(); G.gt.selectAll('*').remove(); G.gn.selectAll('*').remove();
+  G.nodes = new Map(); G.fitted = false;
+  G.svg.call(G.zoom.transform, d3.zoomIdentity);
+}
 function renderSheet() {
   const id = S.sel; if (!id) return;
   const p = S.pos, e = E[id];
   const tlabel = { person: 'Person', place: 'Place', thing: 'Thing', group: 'Group' }[e.type];
   const older = e.names.filter(n => n[0] <= p).map(n => n[1]).filter(n => n !== nameAt(e, p));
   const merged = D.merges.filter(m => m.into === id && m.at <= p);
-  const aka = [...older, ...merged.map(m => nameAt(E[m.from], m.at - 1))];
+  const aka = [...older, ...akaAt(e, p), ...merged.flatMap(m => [nameAt(E[m.from], m.at - 1), ...akaAt(E[m.from], p)])];
   const ob = obsAt(p).filter(o => o.e === id).sort((a, b) => b.s - a.s);
   const rl = relsAt(p).filter(r => r.a === id || r.b === id).sort((a, b) => a.ended - b.ended || b.s - a.s);
   const scs = D.scenes.filter(s => s.id <= p && (present(s, p).has(id) || mentioned(s, p).has(id) || s.place === id));
@@ -656,7 +743,7 @@ function renderSheet() {
       <div><div class="acts"><button class="btn" type="button" data-act="img">${img ? 'Replace picture' : 'Add a picture'}</button>${img ? '<button class="btn" type="button" data-act="unimg">Remove</button>' : ''}</div>
       <small>Shows on the graph. Saved in this browser only.</small></div></div>`;
   if (ob.length) h += `<section><h3 class="sec-h">Known so far <span class="n">${ob.length}</span></h3><div class="facts">` + ob.map(o => `
-      <div class="fact${o.orig !== id ? ' alias' : ''}"><div class="t">${esc(o.t)}</div><blockquote>${esc(smart('"' + o.q + '"'))}</blockquote>
+      <div class="fact"><div class="t">${o.orig !== id ? `<span class="r" style="color:var(--ink-2)">As ${esc(nameAt(E[o.orig], mergeOf(o.orig).at - 1))}: </span>` : ''}${esc(o.t)}</div><blockquote>${esc(smart('"' + o.q + '"'))}</blockquote>
       <div class="m">Scene ${o.s} <button class="linkbtn" type="button" data-show="${o.s}" data-q="${esc(o.q)}">Show in text</button></div></div>`).join('') + `</div></section>`;
   if (rl.length) h += `<section><h3 class="sec-h">Links <span class="n">${rl.length}</span></h3><div class="links">` + rl.map(r => {
       const txt = r.a === id ? `<span class="r">${esc(r.label)}</span> ${entBtn(r.b)}` : `${entBtn(r.a)} <span class="r">${esc(r.label)}</span>`;
@@ -686,7 +773,7 @@ function showTab(tab) {
 function setPos(p, opts = {}) {
   p = clampPos(p);
   if (p === S.pos && !opts.force) return;
-  S.pos = p; S.view = null; S.quote = null; store.set('pos', p);
+  S.pos = p; S.view = null; S.quote = null; store.set('pos:' + S.book, p);
   renderAll();
   if (!opts.keepScroll) $('#pane-read').scrollTop = 0;
 }
@@ -715,7 +802,7 @@ function addPicture(file, id) {
       const k = Math.min(1, 320 / Math.max(im.width, im.height));
       const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-      const ok = store.set('img:' + id, c.toDataURL('image/jpeg', 0.82));
+      const ok = store.set(imgKey(id), c.toDataURL('image/jpeg', 0.82));
       if (!ok) alertInSheet("This browser won't save pictures here. Try a smaller image, or a normal (not private) window.");
       renderSheet(); renderGraph(); if (S.tab === 'index') renderIndex();
     };
@@ -727,23 +814,25 @@ function alertInSheet(msg) { const b = $('#sheet .sheet-b'); if (b) b.insertAdja
 
 /* ---------- Events ---------- */
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-id], [data-act], [data-show], [data-filter], [data-scene], .tab');
+  const t = ev.target.closest('[data-book], [data-id], [data-act], [data-show], [data-filter], [data-scene], .tab, #book');
   if (!t) return;
   if (t.classList.contains('tab')) return showTab(t.dataset.tab);
   if (t.dataset.filter) { S.filters[t.dataset.filter] = !S.filters[t.dataset.filter]; return renderGraph(); }
   if (t.dataset.show) return showInText(+t.dataset.show, t.dataset.q || null);
   if (t.dataset.scene) return showInText(+t.dataset.scene, null);
+  if (t.id === 'book') return openLibrary();
+  if (t.dataset.book) return switchBook(t.dataset.book);
   if (t.dataset.id) return openSheet(t.dataset.id);
   const a = t.dataset.act;
   if (a === 'next') return setPos(S.pos + 1);
   if (a === 'back') { S.view = null; S.quote = null; renderReader(); $('#pane-read').scrollTop = 0; return; }
   if (a === 'close') return closeSheet();
   if (a === 'img') { const i = $('#img-input'); i.dataset.for = S.sel; i.value = ''; i.click(); return; }
-  if (a === 'unimg') { store.set('img:' + S.sel, null); renderSheet(); renderGraph(); return; }
+  if (a === 'unimg') { store.set(imgKey(S.sel), null); store.set('img:' + S.sel, null); renderSheet(); renderGraph(); return; }
 });
 document.addEventListener('keydown', ev => {
   if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('nm')) { ev.preventDefault(); openSheet(ev.target.dataset.id); }
-  if (ev.key === 'Escape' && S.sel) closeSheet();
+  if (ev.key === 'Escape' && (S.sel || S.lib)) closeSheet();
 });
 document.addEventListener('input', ev => {
   if (ev.target.id === 'search') { S.q = ev.target.value; const pos = ev.target.selectionStart; renderIndex(); const s = $('#search'); s.focus(); s.setSelectionRange(pos, pos); }
@@ -757,9 +846,12 @@ $('#img-input').addEventListener('change', ev => { const f = ev.target.files[0];
 matchMedia('(min-width: 960px)').addEventListener('change', () => showTab(S.tab));
 
 /* ---------- Start ---------- */
-$('#book').innerHTML = `${esc(D.book.title)}<small>${esc(D.book.author)}, ${D.book.year}</small>`;
-$('#pos').max = N;
-renderTicks();
+window.addEventListener('hashchange', () => {
+  const id = location.hash.slice(1);
+  if (id !== S.book && LIB.books.some(b => b.id === id)) switchBook(id);
+});
+const fromHash = location.hash.slice(1);
+loadBook(LIB.books.some(b => b.id === fromHash) ? fromHash : store.get('book', LIB.books[0].id));
 renderReader();
 showTab(['read', 'graph', 'timeline', 'index', 'log'].includes(S.tab) ? S.tab : 'graph');
 </script>

@@ -9,7 +9,9 @@ Claude writes the code for this project; Jono reviews previews on his phone and 
 - Later phases use the Claude API on Jono's key through a Cloudflare Worker, extracting only chapters as they are reached.
 
 ## This prototype
-- Static page, no external services. Extraction is pre-written in `src/data.js`.
+- Static page, no external services. Each book lives in `books/<id>/` (`text.txt` + pre-written extraction in `data.js`); `BOOKS` in `src/build.js` lists them.
+- Two books so far: A Scandal in Bohemia and The Red-Headed League. Hold off on more until asked (token cost).
 - Every fact, link, question and name reveal carries a quote that must appear verbatim in its scene. `node src/build.js` enforces this; keep it that way.
 - Spoiler safety lives in the as-of helpers in `src/app.html` (`visible`, `nameAt`, `obsAt`, `relsAt`, `resolve`). Every view must read through them.
-- Rebuild `index.html` after any change in `src/`, and commit both.
+- Reading position and pictures are stored per book in the browser (`pos:<book>`, `img:<book>:<entity>`).
+- Rebuild `index.html` after any change in `src/` or `books/`, and commit both.

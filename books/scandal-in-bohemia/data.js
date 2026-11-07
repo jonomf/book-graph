@@ -1,5 +1,5 @@
 // Extraction for "A Scandal in Bohemia", written ahead of time by Claude.
-// Every quote must appear verbatim in the scene it is filed under; build.js checks this.
+// Every quote must appear verbatim in the scene it is filed under; src/build.js checks this.
 // names: [scene, display name, quote that reveals it]   match: [text to link in the reader, from scene, to scene?]
 
 module.exports = {
@@ -9,6 +9,7 @@ module.exports = {
     year: 1891,
     source: 'Project Gutenberg eBook #1661, The Adventures of Sherlock Holmes, Adventure I',
   },
+  defaultPos: 6,
   parts: [ { n: 'I', start: 1 }, { n: 'II', start: 8 }, { n: 'III', start: 13 } ],
 
   scenes: [
