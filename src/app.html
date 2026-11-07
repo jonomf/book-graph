@@ -344,7 +344,10 @@ const isNew = (e, p) => e.first === p || e.names.some(n => n[0] === p && n[0] !=
 const partOf = id => D.scenes[id - 1].part;
 const scene = id => D.scenes[id - 1];
 
-const partLabel = s => s.part ? `Part ${s.part} · ` : '';
+const isFilm = () => D.book.kind === 'film';
+const partLabel = s => !s.part ? '' : isFilm() ? `${s.part} · ` : `Part ${s.part} · `;
+const qDone = (q, p) => q.answered != null && q.answered <= p;
+const byline = b => `${b.byline || b.author}, ${b.year}`;
 const akaAt = (e, p) => (e.aka || []).filter(a => a[0] <= p).map(a => a[1]);
 const mergeOf = id => D.merges.find(m => m.from === id);
 
@@ -359,7 +362,7 @@ function loadBook(id) {
   sceneText = D.scenes.map(s => s.paras.join('\n'));
   allQuotes = [
     ...D.obs.map(o => [o[1], o[3]]), ...D.rels.map(r => [r[3], r[4]]),
-    ...D.questions.flatMap(q => [[q.raised, q.rq], [q.answered, q.aq]]),
+    ...D.questions.flatMap(q => q.answered ? [[q.raised, q.rq], [q.answered, q.aq]] : [[q.raised, q.rq]]),
     ...D.entities.flatMap(e => [...e.names.filter(n => n[2]).map(n => [n[0], n[2]]), ...e.aka.map(a => [a[0], a[2]])]),
     ...D.merges.map(m => [m.at, m.quote]),
   ];
@@ -374,9 +377,10 @@ function loadBook(id) {
   S.pos = clampPos(store.get('pos:' + D.id, legacy == null ? D.defaultPos : legacy));
   S.view = null; S.quote = null; S.sel = null; S.q = '';
   resetGraph();
-  $('#book').innerHTML = `<span class="book-t">${esc(D.book.title)}</span><span class="book-a">${esc(D.book.author)}, ${D.book.year}</span>
+  $('#book').innerHTML = `<span class="book-t">${esc(D.book.title)}</span><span class="book-a">${esc(byline(D.book))}</span>
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>`;
   $('#pos').max = N;
+  $('.tab[data-tab="read"]').textContent = isFilm() ? 'Notes' : 'Read';
   renderTicks();
   if (location.hash.slice(1) !== D.id) location.hash = D.id;
 }
@@ -604,7 +608,7 @@ function renderTimeline() {
   const cx = id => 8 + (id - 1) * CW + CW / 2;
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Who appears in each scene">`;
   svg += `<rect class="tl-cur" x="${cx(p) - CW / 2}" y="0" width="${CW}" height="${H}"/>`;
-  D.parts.filter(pt => pt.start <= p).forEach(pt => { svg += `<text class="tl-part" x="${cx(pt.start) - CW / 2 + 4}" y="14">PART ${pt.n}</text>`; if (pt.start > 1) svg += `<line class="tl-grid" x1="${cx(pt.start) - CW / 2}" x2="${cx(pt.start) - CW / 2}" y1="4" y2="${H}"/>`; });
+  D.parts.filter(pt => pt.start <= p).forEach(pt => { svg += `<text class="tl-part" x="${cx(pt.start) - CW / 2 + 4}" y="14">${isFilm() ? esc(pt.n.toUpperCase()) : 'PART ' + pt.n}</text>`; if (pt.start > 1) svg += `<line class="tl-grid" x1="${cx(pt.start) - CW / 2}" x2="${cx(pt.start) - CW / 2}" y1="4" y2="${H}"/>`; });
   cols.forEach(s => { svg += `<text class="tl-h${s.id === p ? ' cur' : ''}" data-scene="${s.id}" x="${cx(s.id)}" y="36" text-anchor="middle">${s.id}</text>`; });
   const rowY = i => HH + i * RH + RH / 2;
   people.forEach((e, i) => {
@@ -659,14 +663,14 @@ function renderIndex() {
 function renderLog() {
   const p = S.pos;
   let h = `<div class="about">
-    <p><b>Prototype.</b> Claude read this story ahead of time and bundled what it found into this page, so nothing is sent anywhere while you read. Every fact carries a quote, and the page checks each one against the text of its own scene before showing it.</p>
+    <p><b>Prototype.</b> ${D.book.about ? esc(D.book.about) : 'Claude read this story ahead of time and bundled what it found into this page, so nothing is sent anywhere while you read. Every fact carries a quote, and the page checks each one against the text of its own scene before showing it.'}</p>
     <div class="check">${verified} of ${allQuotes.length} quotes found word for word in their scene</div>
-    <p style="color:var(--ink-2)">Text: ${esc(D.book.source)}. Pictures you add stay in this browser only.</p></div>`;
-  const qs = D.questions.filter(q => q.raised <= p).sort((a, b) => (a.answered <= p) - (b.answered <= p) || b.raised - a.raised);
+    <p style="color:var(--ink-2)">${D.book.sourceUrl ? `Source: <a href="${esc(D.book.sourceUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(D.book.source)}</a>` : `Text: ${esc(D.book.source)}`}. Pictures you add stay in this browser only.</p></div>`;
+  const qs = D.questions.filter(q => q.raised <= p).sort((a, b) => qDone(a, p) - qDone(b, p) || b.raised - a.raised);
   if (qs.length) {
-    const open = qs.filter(q => q.answered > p).length;
+    const open = qs.filter(q => !qDone(q, p)).length;
     h += `<section><h2 class="sec-h">Questions <span class="n">${open} open</span></h2><div class="qs">` + qs.map(q => {
-      const done = q.answered <= p;
+      const done = qDone(q, p);
       return `<div class="qcard${done ? ' done' : ''}"><div class="qq">${esc(q.q)}</div>${done ? `<div class="qa">${esc(q.a)}</div>` : ''}
         <div class="qm">Raised in scene ${q.raised}${done ? ` · answered in scene ${q.answered}` : ''} · <button class="linkbtn" type="button" data-show="${done ? q.answered : q.raised}" data-q="${esc(done ? q.aq : q.rq)}">Show in text</button></div></div>`;
     }).join('') + `</div></section>`;
@@ -682,7 +686,7 @@ function renderLog() {
     D.rels.filter(r => r[3] === sid).forEach(r => items.push(['Link', `${entBtn(resolve(r[0], p))} ${esc(r[2])} ${entBtn(resolve(r[1], p))}`]));
     D.rels.filter(r => r[5] === sid).forEach(r => items.push(['Ended', `${entBtn(resolve(r[0], p))} ${esc(r[2])} ${entBtn(resolve(r[1], p))}`]));
     D.questions.filter(q => q.raised === sid).forEach(q => items.push(['Question', esc(q.q)]));
-    D.questions.filter(q => q.answered === sid && q.answered <= p).forEach(q => items.push(['Answered', `${esc(q.q)} ${esc(q.a)}`]));
+    D.questions.filter(q => q.answered === sid).forEach(q => items.push(['Answered', `${esc(q.q)} ${esc(q.a)}`]));
     h += `<article class="log"><h3><span class="eyebrow">${partLabel(s)}Scene ${sid}</span>${esc(s.title)}</h3><ul>${items.map(([k, v]) => `<li><span class="k">${k}</span><span>${v}</span></li>`).join('')}</ul></article>`;
   }
   h += `</div></section>`;
@@ -700,20 +704,20 @@ function openLibrary() {
   const had = S.sel; S.sel = null; S.lib = true;
   if (had) renderGraph();
   const covers = ['var(--accent)', 'var(--l2)', 'var(--l4)', 'var(--l5)'];
-  let h = `<div class="sheet-h gutter"><div><span class="type">${LIB.books.length} books</span><h2 id="sheet-title">Library</h2></div>
+  let h = `<div class="sheet-h gutter"><div><span class="type">${LIB.books.length} titles</span><h2 id="sheet-title">Library</h2></div>
       <button class="x" type="button" data-act="close" aria-label="Close">×</button></div><div class="sheet-b gutter"><div class="shelf">`;
   LIB.books.forEach((b, i) => {
     const sp = savedPos(b), n = b.scenes.length, cur = b.id === S.book;
-    const num = (b.book.source.match(/Adventure ([IVX]+)$/) || [])[1] || b.book.title.charAt(0);
+    const num = b.book.cover || (b.book.source.match(/Adventure ([IVX]+)$/) || [])[1] || b.book.title.charAt(0);
     const at = cur ? S.pos : sp;
     h += `<button class="vol" type="button" data-book="${b.id}" aria-current="${cur}">
       <span class="cover" style="background:${covers[i % covers.length]}" aria-hidden="true">${esc(num)}</span>
       <span style="min-width:0"><span class="vol-t">${esc(b.book.title)}</span>
-      <div class="vol-m">${esc(b.book.author)} · ${b.book.year} · ${n} scenes · ${b.entities.length} names</div>
+      <div class="vol-m">${esc(byline(b.book))} · ${n} scenes · ${b.entities.length} names</div>
       <div class="vol-p">${at ? `<span class="prog"><i style="width:${(at / n) * 100}%"></i></span><span>${cur ? '<span class="pill">Reading</span> ' : ''}Scene ${at} of ${n}</span>` : `<span class="prog"><i style="width:0"></i></span><span>Not started</span>`}</div></span>
     </button>`;
   });
-  h += `</div><p class="shelf-note">Both stories are from The Adventures of Sherlock Holmes (1892). Each book keeps its own reading position and pictures in this browser.</p></div>`;
+  h += `</div><p class="shelf-note">The two stories are from The Adventures of Sherlock Holmes (1892). The film has scene notes instead of a text. Each title keeps its own position and pictures in this browser.</p></div>`;
   const sh = $('#sheet'); sh.innerHTML = h; sh.hidden = false; $('#scrim').hidden = false;
   const b = sh.querySelector('.vol[aria-current="true"]'); if (b) b.focus();
 }
@@ -750,7 +754,7 @@ function renderSheet() {
       return `<div class="lnk${r.ended ? ' ended' : ''}">${txt}${r.ended ? ` <span class="r">(until scene ${r.end})</span>` : ''}</div>`;
     }).join('') + `</div></section>`;
   if (qs.length) h += `<section><h3 class="sec-h">Questions</h3><div class="qs">` + qs.map(q => {
-      const done = q.answered <= p;
+      const done = qDone(q, p);
       return `<div class="qcard${done ? ' done' : ''}"><div class="qq">${esc(q.q)}</div>${done ? `<div class="qa">${esc(q.a)}</div>` : '<div class="qm">Still open</div>'}</div>`;
     }).join('') + `</div></section>`;
   h += `<section><h3 class="sec-h">Scenes</h3><div class="scn">${scs.map(s => `<button type="button" class="${present(s, p).has(id) || s.place === id ? 'p' : ''}" data-show="${s.id}" title="${esc(s.title)}">${s.id}</button>`).join('')}</div></section>`;

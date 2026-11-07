@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const BOOKS = ['scandal-in-bohemia', 'red-headed-league']; // library order
+const BOOKS = ['scandal-in-bohemia', 'red-headed-league', 'empire-strikes-back']; // library order
 
 const norm = s => s.replace(/--/g, '—').replace(/\s+/g, ' ').trim();
 let failed = false;
@@ -15,11 +15,14 @@ function buildBook(id) {
   const D = require(path.join(dir, 'data.js'));
   const raw = fs.readFileSync(path.join(dir, 'text.txt'), 'utf8');
 
-  // Optional part headings ("I.", "II.", ...) on their own line; paragraphs are separated by blank lines.
+  // Optional part headings on their own line: "I.", "II.", ... for books, or "# Name" for a film's sequences.
+  // Paragraphs are separated by blank lines.
   const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
   const paras = []; let part = null;
   for (const b of blocks) {
     if (/^(I|II|III|IV|V|VI)\.$/.test(b)) { part = b.slice(0, -1); continue; }
+    const named = b.match(/^#\s+(.+)$/);
+    if (named) { part = named[1].trim(); continue; }
     paras.push({ part, text: norm(b) });
   }
 
@@ -50,7 +53,7 @@ function buildBook(id) {
   });
   D.obs.forEach(o => { needId(o[0], 'fact'); check(`fact ${o[0]}`, o[1], o[3]); });
   D.rels.forEach(r => { needId(r[0], 'link'); needId(r[1], 'link'); check(`link ${r[0]}→${r[1]}`, r[3], r[4]); });
-  D.questions.forEach(q => { check('question raised', q.raised, q.rq); check('question answered', q.answered, q.aq); q.about.forEach(a => needId(a, 'question')); });
+  D.questions.forEach(q => { check('question raised', q.raised, q.rq); if (q.answered) check('question answered', q.answered, q.aq); q.about.forEach(a => needId(a, 'question')); });
   D.merges.forEach(m => { needId(m.from, 'merge'); needId(m.into, 'merge'); check(`merge ${m.from}`, m.at, m.quote); });
   scenes.forEach(s => [...s.present, ...s.mentioned, ...(s.place ? [s.place] : [])].forEach(x => needId(x, `scene ${s.id}`)));
 
@@ -74,7 +77,7 @@ function buildBook(id) {
     })),
     obs: D.obs.map(o => [o[0], o[1], o[2], norm(o[3])]),
     rels: D.rels.map(r => [r[0], r[1], r[2], r[3], norm(r[4]), r[5] || null]),
-    questions: D.questions.map(q => ({ ...q, rq: norm(q.rq), aq: norm(q.aq) })),
+    questions: D.questions.map(q => ({ ...q, rq: norm(q.rq), aq: q.aq ? norm(q.aq) : null, answered: q.answered || null })),
   };
 }
 
