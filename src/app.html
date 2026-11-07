@@ -61,6 +61,10 @@ button { font: inherit; color: inherit; }
 .book-t { min-width: 0; font-family: var(--display); font-size: 19px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .book-a { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 .book svg { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chip.text-toggle { display: none; margin-left: auto; flex: none; }
+.text-toggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.splitter { display: none; }
+body.dragging, body.dragging * { cursor: col-resize !important; user-select: none !important; }
 .book:hover .book-t { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 4px; }
 @media (max-width: 520px) { .book-a { display: none; } }
 
@@ -235,10 +239,20 @@ svg .tl-cur { fill: var(--mark); }
 
 /* Wide screens: the reader stays on the left */
 @media (min-width: 960px) {
-  main { display: grid; grid-template-columns: minmax(400px, 46%) minmax(0, 1fr); }
+  main { display: grid; grid-template-columns: var(--read-w, 46%) 12px minmax(0, 1fr); }
+  main.reader-off { grid-template-columns: minmax(0, 1fr); }
   .pane { position: relative; inset: auto; }
-  .pane.reader { grid-column: 1; grid-row: 1; border-right: 1px solid var(--rule); }
-  .pane:not(.reader) { grid-column: 2; grid-row: 1; }
+  .pane.reader { grid-column: 1; grid-row: 1; }
+  .pane:not(.reader) { grid-column: 3; grid-row: 1; }
+  main.reader-off .pane:not(.reader) { grid-column: 1; }
+  .chip.text-toggle { display: inline-flex; }
+  .splitter { display: block; grid-column: 2; grid-row: 1; position: relative; cursor: col-resize; touch-action: none; background: var(--paper); }
+  .splitter::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--rule); }
+  .splitter::after { content: ""; position: absolute; top: 50%; left: 50%; width: 6px; height: 40px; margin: -20px 0 0 -3px; border-radius: 3px; background: var(--rule); border: 1px solid var(--paper); }
+  .splitter:hover::before, .splitter:focus-visible::before, body.dragging .splitter::before { width: 2px; background: var(--accent); }
+  .splitter:hover::after, .splitter:focus-visible::after, body.dragging .splitter::after { background: var(--accent); }
+  .splitter:focus-visible { outline: none; }
+  main.reader-off .splitter { display: none; }
   .tabs { grid-template-columns: repeat(4, 1fr); }
   .tab[data-tab="read"] { display: none; }
   .dock { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); column-gap: 28px; align-items: center; }
@@ -256,10 +270,12 @@ svg .tl-cur { fill: var(--mark); }
   <header class="top gutter">
     <span class="brand">Book Graph</span>
     <button class="book" id="book" type="button" aria-haspopup="dialog" aria-label="Change book"></button>
+    <button class="chip text-toggle" id="text-toggle" type="button" aria-controls="pane-read"></button>
   </header>
 
   <main>
     <section class="pane reader" id="pane-read" aria-label="Story"><div class="gutter pane-pad"><div class="read-inner" id="reader"></div></div></section>
+    <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-controls="pane-read" aria-label="Resize the text column. Drag, or use the arrow keys. Enter hides it." tabindex="0"></div>
     <section class="pane graph-pane" id="pane-graph" aria-label="Graph" hidden>
       <svg id="graph" role="img" aria-label="Graph of people, places and things known so far"></svg>
       <div class="g-controls gutter" id="g-controls"></div>
@@ -317,6 +333,8 @@ const S = {
   book: null,
   pos: 1,
   lib: false,          // library sheet open
+  readOff: !!store.get('readOff', false),       // wide screens: text column hidden
+  readW: +store.get('readW', 0.46) || 0.46,     // wide screens: text column width, as a share of the window
   tab: store.get('tab', 'graph'),
   view: null,          // scene shown in the reader when looking back
   quote: null,         // quote to highlight in the reader
@@ -763,11 +781,74 @@ function renderSheet() {
 }
 
 /* ---------- Navigation ---------- */
+/* ---------- Text column (wide screens) ---------- */
+const READ_MIN = 0.2, READ_MAX = 0.75;
+function applyLayout() {
+  const m = $('main'), off = wide() && S.readOff;
+  m.classList.toggle('reader-off', off);
+  m.style.setProperty('--read-w', (S.readW * 100).toFixed(1) + '%');
+  const sp = $('#splitter');
+  sp.setAttribute('aria-valuenow', Math.round(S.readW * 100));
+  sp.setAttribute('aria-valuemin', READ_MIN * 100); sp.setAttribute('aria-valuemax', READ_MAX * 100);
+  const t = $('#text-toggle');
+  t.setAttribute('aria-pressed', String(!S.readOff));
+  t.innerHTML = S.readOff
+    ? `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M6 2.5v11"/></svg>Show text`
+    : `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M6 2.5v11M3 6h1.5M3 8.5h1.5"/></svg>Hide text`;
+}
+function setReadOff(off) {
+  S.readOff = off; store.set('readOff', off);
+  $('#pane-read').hidden = wide() ? off : S.tab !== 'read';
+  applyLayout();
+  if (!off) renderReader();
+}
+function setReadW(f, save) {
+  S.readW = Math.max(READ_MIN, Math.min(READ_MAX, f));
+  applyLayout();
+  if (save) store.set('readW', +S.readW.toFixed(3));
+}
+(function splitterDrag() {
+  const sp = $('#splitter');
+  let raf = 0, last = 0, dragging = false;
+  sp.addEventListener('pointerdown', ev => {
+    if (ev.button !== 0) return;
+    dragging = true; sp.setPointerCapture(ev.pointerId); document.body.classList.add('dragging'); ev.preventDefault();
+  });
+  sp.addEventListener('pointermove', ev => {
+    if (!dragging) return;
+    last = ev.clientX;
+    if (!raf) raf = requestAnimationFrame(() => {
+      raf = 0;
+      const r = $('main').getBoundingClientRect();
+      const f = (last - r.left) / r.width;
+      if (f < READ_MIN - 0.08) { sp.dataset.snap = 'hide'; setReadW(READ_MIN, false); }  // drag far left to hide
+      else { delete sp.dataset.snap; setReadW(f, false); }
+    });
+  });
+  const end = ev => {
+    if (!dragging) return;
+    dragging = false; document.body.classList.remove('dragging');
+    try { sp.releasePointerCapture(ev.pointerId); } catch (e) {}
+    if (sp.dataset.snap === 'hide') { delete sp.dataset.snap; setReadOff(true); }
+    store.set('readW', +S.readW.toFixed(3));
+  };
+  sp.addEventListener('pointerup', end);
+  sp.addEventListener('pointercancel', end);
+  sp.addEventListener('dblclick', () => setReadW(0.46, true));
+  sp.addEventListener('keydown', ev => {
+    if (ev.key === 'ArrowLeft') { setReadW(S.readW - 0.02, true); ev.preventDefault(); }
+    if (ev.key === 'ArrowRight') { setReadW(S.readW + 0.02, true); ev.preventDefault(); }
+    if (ev.key === 'Enter') { setReadOff(true); $('#text-toggle').focus(); ev.preventDefault(); }
+  });
+})();
+$('#text-toggle').addEventListener('click', () => setReadOff(!S.readOff));
+
 function showTab(tab) {
   if (wide() && tab === 'read') tab = 'graph';
   S.tab = tab; store.set('tab', tab);
   ['graph', 'timeline', 'index', 'log'].forEach(t => { $('#pane-' + t).hidden = t !== tab; });
-  $('#pane-read').hidden = !(wide() || tab === 'read');
+  $('#pane-read').hidden = wide() ? S.readOff : tab !== 'read';
+  applyLayout();
   renderDock();
   if (tab === 'graph') { renderGraph(); requestAnimationFrame(sizeGraph); }
   if (tab === 'timeline') renderTimeline();
@@ -785,6 +866,7 @@ function showInText(sid, q) {
   S.view = sid === S.pos ? null : sid; S.quote = q ? { s: sid, q } : null;
   if (S.sel && !wide()) closeSheet();
   if (!wide()) showTab('read');
+  else if (S.readOff) setReadOff(false);
   renderReader();
   if (!q) $('#pane-read').scrollTop = 0;
 }

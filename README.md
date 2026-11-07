@@ -12,7 +12,7 @@ It also has one film, "The Empire Strikes Back" (1980, 18 scenes in four sequenc
 
 - **Library.** Tap the book title to switch stories. Each book keeps its own reading position and pictures, and each has its own link (`#scandal-in-bohemia`, `#red-headed-league`).
 - **Reading position.** One slider sets where you are in the story. Every view filters to it, so scrubbing back hides later facts, names and links.
-- **Read.** The scene text, with known names linked.
+- **Read.** The scene text, with known names linked. On wide screens the text sits beside the other views: drag the divider to resize it (double-click to reset), or hide it with the Hide text button.
 - **Graph.** People, places, things and groups, coloured by type. New items pulse; links that are no longer true are dashed.
 - **Timeline.** Who is on stage, or only mentioned, in each scene.
 - **Index and Log.** Everything known so far, what each scene added, and open and answered questions.

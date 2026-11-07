@@ -15,4 +15,5 @@ Claude writes the code for this project; Jono reviews previews on his phone and 
 - Every fact, link, question and name reveal carries a quote that must appear verbatim in its scene. `node src/build.js` enforces this; keep it that way.
 - Spoiler safety lives in the as-of helpers in `src/app.html` (`visible`, `nameAt`, `obsAt`, `relsAt`, `resolve`). Every view must read through them.
 - Reading position and pictures are stored per book in the browser (`pos:<book>`, `img:<book>:<entity>`).
+- Wide screens (960px and up): the text column width and hidden state are stored as `readW` and `readOff`. Phones show the text as its own tab instead.
 - Rebuild `index.html` after any change in `src/` or `books/`, and commit both.
