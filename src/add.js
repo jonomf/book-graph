@@ -417,20 +417,14 @@ function titleFromText(title, author, body) {
 /* ---------- AI analysis ---------- */
 const MODELS = [['claude-sonnet-5-5', 'Claude Sonnet 5.5 (balanced)'], ['claude-haiku-5-5', 'Claude Haiku 5.5 (cheapest)'], ['claude-opus-5-5', 'Claude Opus 5.5 (most capable)']];
 const AI = Object.assign({ provider: 'auto', key: '', url: '', model: 'claude-sonnet-5-5' }, store.get('ai', {}));
-let sampleFn = null;      // the page's own Claude, when it runs on claude.ai
 let aiRun = null;         // { ctl, sid, msg } while analyzing
-if (window.claude && typeof window.claude.use === 'function') {
-  window.claude.use('sample').then(f => { sampleFn = f || null; if (S.lib === 'ai') openLibrary('ai'); if (S.tab === 'log') renderLog(); }).catch(() => {});
-}
 function aiProvider() {
-  if (AI.provider === 'claude') return sampleFn ? 'claude' : null;
   if (AI.provider === 'key') return AI.key ? 'key' : null;
   if (AI.provider === 'server') return AI.url ? 'server' : null;
-  return sampleFn ? 'claude' : AI.key ? 'key' : AI.url ? 'server' : null;
+  return AI.key ? 'key' : AI.url ? 'server' : null;
 }
 function aiProviderText() {
   const p = aiProvider();
-  if (p === 'claude') return 'Runs on your Claude plan, through this page.';
   if (p === 'key') return `Runs on your Anthropic API key (${MODELS.find(m => m[0] === AI.model)?.[1].split(' (')[0] || AI.model}).`;
   if (p === 'server') return 'Runs through your own server.';
   return 'No AI set up yet.';
@@ -487,7 +481,6 @@ ${AI_SHAPE}`;
 }
 async function callAI(prompt, signal) {
   const p = aiProvider();
-  if (p === 'claude') return sampleFn.json(prompt, { signal, modelTier: 'default' });
   if (p === 'key' || p === 'server') {
     const headers = { 'content-type': 'application/json', 'anthropic-version': '2023-06-01' };
     if (p === 'key') { headers['x-api-key'] = AI.key; headers['anthropic-dangerous-direct-browser-access'] = 'true'; }
@@ -576,7 +569,7 @@ async function runAI() {
       if (S.book !== bookId) break;
       const n = applyAI(sid, out || {});
       D.ai.done.push(sid);
-      D.ai.provider = aiProvider(); D.ai.model = aiProvider() === 'claude' ? 'Claude plan' : AI.model;
+      D.ai.provider = aiProvider(); D.ai.model = AI.model;
       D.checked = false; loadBookData();
       await saveTitle(D);
       aiRun.last = `Scene ${sid}: ${n} item${n === 1 ? '' : 's'} added.`;
@@ -594,7 +587,6 @@ async function runAI() {
 }
 function aiErrorText(e) {
   const c = e && e.code;
-  if (c === 'not_granted') return "Claude wasn't allowed for this page. You can allow it from the page's permissions.";
   if (c === 'rate_limited') return "You've hit a usage limit. Try again later.";
   if (c === 'invalid_json') return "Claude's answer couldn't be read. Try that scene again.";
   if (c === 'http_401') return 'The API key was refused. Check it in AI settings.';
@@ -658,8 +650,7 @@ function openLibrary(mode = true) {
     const opt = (v, label, note, disabled) => `<label class="opt${disabled ? ' off' : ''}"><input type="radio" name="ai-p" value="${v}"${AI.provider === v ? ' checked' : ''}${disabled ? ' disabled' : ''}><span><b>${label}</b><small>${note}</small></span></label>`;
     const models = MODELS.map(([v, l]) => `<option value="${v}"${AI.model === v ? ' selected' : ''}>${esc(l)}</option>`).join('');
     h = head('AI settings', '', true) + `<div class="sheet-b gutter"><div class="addform col">
-      ${opt('auto', 'Automatic', 'Uses Claude on this page when it can, otherwise your API key, otherwise your server.')}
-      ${opt('claude', 'Claude on this page', sampleFn ? 'Uses your own Claude plan. Claude asks once before the first analysis.' : 'Only available when Book Graph is opened on claude.ai.', !sampleFn)}
+      ${opt('auto', 'Automatic', 'Uses your API key if you have added one, otherwise your server.')}
       ${opt('key', 'Your Anthropic API key', 'Billed to your API account, separate from a Claude plan.')}
       <input class="search" id="ai-key" type="password" placeholder="sk-ant-…" value="${esc(AI.key)}" autocomplete="off" aria-label="Anthropic API key">
       ${opt('server', 'Your own server', 'Any address that accepts Anthropic Messages API requests, such as a Cloudflare Worker holding your key.')}
