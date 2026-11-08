@@ -14,7 +14,8 @@ Open the library (tap the title) to add more:
 
 - **Add from Wikipedia.** Search for a book, film or show. The page reads its plot section and builds a graph without AI: names come from the article's cast or character list, Wikidata and links in the plot; each paragraph is a step; names in the same sentence are linked; family ties from Wikidata are added only where a sentence states them, so they don't spoil anything. Works on the GitHub version only (the Claude-hosted page can't reach Wikipedia). Plot text is CC BY-SA and credited.
 - **Add your own text.** Paste a story or choose a .txt file. Chapter headings become steps; otherwise it's cut into sections of about 1,800 words.
-- **AI analysis.** For any added title, Claude reads one scene at a time, only up to your position, and adds labelled links, facts, questions, renames and merges. Anything whose quote isn't in that scene is dropped. Two ways to pay for it, set in AI settings:
+- **AI analysis.** For any added title, Claude reads one scene at a time, only up to your position, and adds labelled links, facts, questions, renames and merges. Anything whose quote isn't in that scene is dropped. Three ways to pay for it, set in AI settings:
+  - **Claude on this page:** when Book Graph is opened on claude.ai, it runs on the viewer's own Claude plan (Claude asks once).
   - **Your Anthropic API key:** called straight from the browser, billed to your API account.
   - **Your own server:** any address that accepts Anthropic Messages API requests, such as a Cloudflare Worker holding a key.
 

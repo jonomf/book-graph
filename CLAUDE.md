@@ -18,6 +18,6 @@ Claude writes the code for this project; Jono reviews previews on his phone and 
 - Wide screens (960px and up): the text column width and hidden state are stored as `readW` and `readOff`. Phones show the text as its own tab instead.
 - Added titles (`src/add.js`) have the same shape as bundled ones plus `user: true`, `origin` (`wikipedia` | `text`) and `ai.done` (analyzed scenes). Stored in IndexedDB `bookgraph/titles`.
 - Wikipedia scan is deterministic: same article, same graph. Co-occurrence links are labelled `appears with` and hidden when a labelled link joins the same pair (`relsAt`). Wikidata family ties only where a sentence names both people and the relationship.
-- AI analysis: one call per scene, only up to the reading position, results kept only if quotes are in that scene (`applyAI`). Providers: user's API key (direct browser access header) or a user server speaking the Messages API. No Claude-plan (`sample`) option: Jono asked for it to be removed. Settings in local storage `ai`.
-- The Claude-hosted copy declares no capabilities and can't reach Wikipedia or the API (CSP), so adding from Wikipedia and AI analysis only work on the GitHub version.
+- AI analysis: one call per scene, only up to the reading position, results kept only if quotes are in that scene (`applyAI`). Providers: `sample` capability on claude.ai (viewer's plan), user's API key (direct browser access header), or a user server speaking the Messages API. Settings in local storage `ai`.
+- The Claude-hosted copy declares `capabilities: {sample: {}}`; it can't reach Wikipedia (CSP).
 - Rebuild `index.html` after any change in `src/` or `books/`, and commit both.
