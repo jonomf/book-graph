@@ -8,6 +8,19 @@ It also has one film, "The Empire Strikes Back" (1980, 18 scenes in four sequenc
 
 **Live page:** https://jonomf.github.io/book-graph/
 
+## Adding titles
+
+Open the library (tap the title) to add more:
+
+- **Add from Wikipedia.** Search for a book, film or show. The page reads its plot section and builds a graph without AI: names come from the article's cast or character list, Wikidata and links in the plot; each paragraph is a step; names in the same sentence are linked; family ties from Wikidata are added only where a sentence states them, so they don't spoil anything. Works on the GitHub version only (the Claude-hosted page can't reach Wikipedia). Plot text is CC BY-SA and credited.
+- **Add your own text.** Paste a story or choose a .txt file. Chapter headings become steps; otherwise it's cut into sections of about 1,800 words.
+- **AI analysis.** For any added title, Claude reads one scene at a time, only up to your position, and adds labelled links, facts, questions, renames and merges. Anything whose quote isn't in that scene is dropped. Three ways to pay for it, set in AI settings:
+  - **Claude on this page:** when Book Graph is opened on claude.ai, it runs on the viewer's own Claude plan (Claude asks once).
+  - **Your Anthropic API key:** called straight from the browser, billed to your API account.
+  - **Your own server:** any address that accepts Anthropic Messages API requests, such as a Cloudflare Worker holding a key.
+
+Added titles, keys and settings stay in your browser (IndexedDB and local storage).
+
 ## What it does
 
 - **Library.** Tap the book title to switch stories. Each book keeps its own reading position and pictures, and each has its own link (`#scandal-in-bohemia`, `#red-headed-league`).
@@ -27,6 +40,7 @@ It also has one film, "The Empire Strikes Back" (1980, 18 scenes in four sequenc
 | `books/<id>/text.txt` | The text to quote: a public-domain story (Project Gutenberg eBook #1661), or scene notes for a film. One paragraph per block. Optional part headings on their own line: `I.`, `II.` for books, `# Name` for a film's sequences. |
 | `books/<id>/data.js` | The extraction: scenes, entities, facts, links, questions, name reveals, aliases and merges, each with a quote |
 | `src/app.html` | The app: markup, styles and script. The build inserts the data. |
+| `src/add.js` | Adding titles: Wikipedia and Wikidata scan, your own text, AI analysis and its providers, library views. Inlined into the page by the build. |
 | `src/build.js` | Splits each text into scenes, checks every quote, and writes `index.html`. The `BOOKS` list sets library order. |
 
 To add a book, create `books/<id>/` with both files and add the id to `BOOKS` in `src/build.js`.

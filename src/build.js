@@ -86,7 +86,8 @@ if (failed) process.exit(1);
 
 const tpl = fs.readFileSync(path.join(__dirname, 'app.html'), 'utf8');
 const json = JSON.stringify({ books: library }).replace(/</g, '\\u003c');
-const body = tpl.replace('/*__DATA__*/null', () => json);
+const addJs = fs.readFileSync(path.join(__dirname, 'add.js'), 'utf8');
+const body = tpl.replace('/*__DATA__*/null', () => json).replace('/*__ADD__*/', () => addJs);
 const cut = body.indexOf('<div class="app">');
 const headTags = body.slice(0, cut).replace('<meta name="claude:viewport-fit-sides" content="cover">\n', '');
 const page = `<!doctype html>
