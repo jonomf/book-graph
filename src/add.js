@@ -659,7 +659,7 @@ function openLibrary(mode = true) {
     const models = MODELS.map(([v, l]) => `<option value="${v}"${AI.model === v ? ' selected' : ''}>${esc(l)}</option>`).join('');
     h = head('AI settings', '', true) + `<div class="sheet-b gutter"><div class="addform col">
       ${opt('auto', 'Automatic', 'Uses Claude on this page when it can, otherwise your API key, otherwise your server.')}
-      ${opt('claude', 'Claude on this page', sampleFn ? 'Uses your own Claude plan. Claude asks once before the first analysis.' : 'Only available when Book Graph is opened on claude.ai.', !sampleFn)}
+      ${opt('claude', 'Claude on this page', sampleFn ? 'Uses your own Claude plan. Claude asks once before the first analysis.' : 'Only available when Story Atlas is opened on claude.ai.', !sampleFn)}
       ${opt('key', 'Your Anthropic API key', 'Billed to your API account, separate from a Claude plan.')}
       <input class="search" id="ai-key" type="password" placeholder="sk-ant-…" value="${esc(AI.key)}" autocomplete="off" aria-label="Anthropic API key">
       ${opt('server', 'Your own server', 'Any address that accepts Anthropic Messages API requests, such as a Cloudflare Worker holding your key.')}
@@ -705,7 +705,7 @@ async function doWpSearch(q) {
   } catch (e) {
     if (e.name === 'AbortError') return;
     st.className = 'ai-msg bad';
-    st.textContent = e.message === 'NETWORK' ? "This copy of Book Graph can't reach Wikipedia. Open the GitHub version to add titles from Wikipedia." : e.message;
+    st.textContent = e.message === 'NETWORK' ? "This copy of Story Atlas can't reach Wikipedia. Open the GitHub version to add titles from Wikipedia." : e.message;
   }
 }
 async function doWpAdd(title) {
@@ -723,7 +723,7 @@ async function doWpAdd(title) {
   } catch (e) {
     if (e.name === 'AbortError') return;
     st.className = 'ai-msg bad';
-    st.textContent = e.message === 'NETWORK' ? "This copy of Book Graph can't reach Wikipedia. Open the GitHub version to add titles from Wikipedia." : e.message;
+    st.textContent = e.message === 'NETWORK' ? "This copy of Story Atlas can't reach Wikipedia. Open the GitHub version to add titles from Wikipedia." : e.message;
   }
 }
 async function doTextAdd() {

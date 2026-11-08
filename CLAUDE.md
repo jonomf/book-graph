@@ -1,6 +1,8 @@
-# Book Graph
+# Story Atlas
 
 Claude writes the code for this project; Jono reviews previews on his phone and approves.
+
+Renamed from Book Graph. Browser storage keeps the old names (`bookgraph:` keys, IndexedDB `bookgraph`) so saved positions, pictures and titles carry over; don't rename them.
 
 ## Decisions so far
 - A hosted web app, phone first. No Obsidian integration.

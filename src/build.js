@@ -95,7 +95,7 @@ const page = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Book Graph prototype: a spoiler-safe graph of a story's people, places and things that grows as you read.">
+<meta name="description" content="Story Atlas prototype: a spoiler-safe map of the people, places and things in books and films that grows as you read or watch.">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 ${headTags.trim()}
 </head>
