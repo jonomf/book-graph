@@ -4,7 +4,7 @@ A companion for books and films that maps a story's people, places and things as
 
 This is the proof-of-concept prototype. It has two public-domain stories from The Adventures of Sherlock Holmes: "A Scandal in Bohemia" (15 scenes) and "The Red-Headed League" (14 scenes). The extraction was done ahead of time and is bundled into the page, so the page needs no server or API key.
 
-It also has one film, "The Empire Strikes Back" (1980, 18 scenes in four sequences). A film has no public text to quote, so `books/empire-strikes-back/text.txt` holds Claude's own scene notes, written from the film and checked against [Wikipedia's plot summary](https://en.wikipedia.org/wiki/The_Empire_Strikes_Back). Facts quote those notes, so the same quote check and spoiler rules apply.
+It also has one film, "The Empire Strikes Back" (1980, 40 scenes in four sequences). A film has no public text to quote, so `books/empire-strikes-back/text.txt` holds Claude's own scene notes, written from the film and checked against the detailed plot summaries on [Wookieepedia](https://starwars.fandom.com/wiki/Star_Wars:_Episode_V_The_Empire_Strikes_Back) and [Wikipedia](https://en.wikipedia.org/wiki/The_Empire_Strikes_Back). Facts quote those notes, so the same quote check and spoiler rules apply.
 
 **Live page:** https://jonomf.github.io/book-graph/ (the repo keeps its old name for now)
 
